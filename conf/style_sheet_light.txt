@@ -1,0 +1,80 @@
+QFrame,QWidget, QLabel, QToolTip {
+      color:rgb(20,20,20);
+      background-color:rgb(220,230,240);
+  }
+QLineEdit {
+    color:rgb(10,10,10);
+    background-color:rgb(210,220,230);
+    selection-background-color: rgb(240,220,150);
+  }
+QPushButton:hover { background-color: rgb(140,120,50);}
+QPushButton{
+      color: rgb(20,25,28);
+      background-color: rgb(220,225,228);
+}
+QTextEdit{
+      background-color: rgb(220,220,220);
+}
+ QCheckBox {
+        color: black;
+        spacing: 5px;
+        border: 1px solid dark;
+  }
+QComboBox,QSpinBox{
+        height :28px;
+        background: rgb(210,230,240);
+        color: rgb(30,35,40);
+}
+QMainWindow,QMenu {
+      background: rgb(210,220,220);
+      color: black;
+  }
+
+QListView,QTreeView {
+      show-decoration-selected: 1;
+      border: 1px solid dark;
+  }
+
+  QTreeView::item {
+       border: 1px solid dark;
+      border-bottom-color:rgb(20,15,15);
+  }
+QTabWidget::pane{background:rgb(210,220,220); color:rgb(20,15,15);}
+QTabBar::tab {
+      background: rgb(220,220,220);
+      color:rgb(10,15,15);
+  }
+QTabBar::tab:selected {
+      background: rgb(230,235,232);
+      color:rgb(20,20,20);
+  }
+QToolTip {
+      border: 1px solid darkkhaki;
+      opacity: 200;
+  }
+
+  QMenuBar {
+      background-color: transparent;
+  }
+
+  QMenuBar::item {
+      background: rgb(230,240,235);
+      color:black;
+  }
+
+  QMenuBar::item:selected {
+      background: rgb(220,245,245);
+  }
+
+  QMenuBar::item:pressed {
+      background: #888888;
+  }
+  QToolBar {
+      background: transparent;
+      spacing: 1px;
+  }
+  QToolButton {
+        height :32px;
+        width:45px;
+        background-color:transparent;
+    }
