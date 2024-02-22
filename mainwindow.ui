@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>690</width>
+    <width>705</width>
     <height>556</height>
    </rect>
   </property>
@@ -77,7 +77,7 @@
          <item>
           <widget class="QLabel" name="label">
            <property name="text">
-            <string> 书架(单击打开)</string>
+            <string> 书架</string>
            </property>
           </widget>
          </item>
@@ -418,7 +418,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>690</width>
+     <width>705</width>
      <height>29</height>
     </rect>
    </property>

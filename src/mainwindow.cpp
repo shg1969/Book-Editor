@@ -1828,15 +1828,14 @@ void MainWindow::on_action_read_mode_triggered()
     }
 }
 
-void MainWindow::on_file_browse_listWidget_itemDoubleClicked(QTreeWidgetItem *item, int column)
+void MainWindow::on_file_browse_listWidget_itemDoubleClicked(QListWidgetItem *item)
 {
-    column=0;//无用功，避免警告
 //    item->setHidden(1);
-    if(item->text(0)==book.info.name)
+    if(item->text()==book.info.name)
         return;
 
     //从树状表中获取数据
-    QString book_name=item->data(0,Qt::DisplayRole).toString();
+    QString book_name=item->data(Qt::DisplayRole).toString();
     //打开书籍
     if(is_modefied)
     {

@@ -17,11 +17,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     src/book.cpp \
+    src/full_screen_reader.cpp \
     src/main.cpp \
     src/mainwindow.cpp
 
 HEADERS += \
     inc/book.h \
+    inc/full_screen_reader.h \
     inc/mainwindow.h
 
 # Default rules for deployment.

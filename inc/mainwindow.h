@@ -132,7 +132,7 @@ private slots:
     void on_tabWidget_currentChanged(int index);
 
     //书架
-    void on_file_browse_listWidget_itemDoubleClicked(QTreeWidgetItem *item, int column);
+    void on_file_browse_listWidget_itemDoubleClicked(QListWidgetItem *item);
     void on_file_browse_listWidget_customContextMenuRequested(const QPoint &pos);
 
     //目录
