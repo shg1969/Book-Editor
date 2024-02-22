@@ -1153,6 +1153,21 @@ void MainWindow::on_replace_all_btn_clicked()
     is_modefied=1;
     on_find_all_btn_clicked();
 }
+
+void MainWindow::add_note(QString key, QString content)
+{
+    content+="\n——"+book.info.name;
+    if(key_notes.contains(key))
+    {
+        key_notes[key].append(content);
+    }
+    else
+    {
+        key_notes[key].append(key);
+        key_notes[key].append(content);
+        ui->note_key_listWidget->addItem(key);
+    }
+}
 /*
 void MainWindow::on_dir_listWidget_itemClicked(QListWidgetItem *item)
 {
@@ -1190,16 +1205,7 @@ void MainWindow::on_note_key_LineEdit_returnPressed()
     auto key=ui->note_key_LineEdit->text();
     auto content=ui->note_content_LineEdit->text();
 
-    if(key_notes.contains(key))
-    {
-        key_notes[key].append(content);
-    }
-    else
-    {
-        key_notes[key].append(key);
-        key_notes[key].append(content);
-        ui->note_key_listWidget->addItem(key);
-    }
+    add_note(key,content);
     is_modefied=1;
 }
 
@@ -1746,7 +1752,7 @@ void MainWindow::on_action_read_mode_triggered()
             auto pre_chapter=menu.addAction("上一章");
             auto next_chapter=menu.addAction("下一章");
             menu.addSeparator();
-            auto add_note=menu.addAction("添加笔记");
+            auto act_add_note=menu.addAction("添加笔记");
             menu.addSeparator();
             auto exit=menu.addAction("退出全屏显示");
 
@@ -1758,7 +1764,7 @@ void MainWindow::on_action_read_mode_triggered()
             if(v==book.data.size()-1&&c==book.data[v].size()-1)
                 menu.removeAction(next_chapter);
             if(!reader.textCursor().hasSelection())
-                menu.removeAction(add_note);
+                menu.removeAction(act_add_note);
 
             auto fore_color=fmt.foreground().color();
             auto sheet="QMenu {"+background_color_sheet+";"
@@ -1810,12 +1816,13 @@ void MainWindow::on_action_read_mode_triggered()
             connect(exit,&QAction::triggered,[&]{
                 dialog.close();
             });
-            connect(add_note,&QAction::triggered,[&]{
+            connect(act_add_note,&QAction::triggered,[&]{
                 auto ans=QInputDialog::getText(Q_NULLPTR,"添加笔记","索引：");
                 if(ans.size()==0)return;
                 ans=ans.trimmed();
                 if(!key_notes.contains(ans))key_notes[ans].push_back(ans);
                 key_notes[ans].append(reader.textCursor().selectedText().trimmed());
+                add_note(ans,reader.textCursor().selectedText().trimmed());
             });
             menu.exec(QCursor::pos());
         });

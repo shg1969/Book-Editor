@@ -148,6 +148,7 @@ private slots:
     void on_replace_current_btn_clicked();
     void on_replace_all_btn_clicked();
     //摘录
+    void add_note(QString key,QString content);
     void on_auto_focus_checkBox_stateChanged(int arg1);//自动聚焦到key编辑框
     void on_note_key_LineEdit_returnPressed();
     void on_note_save_btn_clicked();
