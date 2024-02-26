@@ -11,6 +11,7 @@
 #include<QHash>
 #include<QVector>
 #include<QSettings>
+#include"inc/textedit.h"
 #include<QPdfWriter>
 #include<QToolBox>
 #include<QDialog>
@@ -19,6 +20,7 @@
 #include<QTextStream>
 #include<QMessageBox>
 #include<QListWidget>
+#include <QCompleter>
 #include<QFileDialog>
 #include<QColorDialog>
 #include <QMainWindow>
@@ -27,6 +29,7 @@
 #include<QListWidgetItem>
 #include<QFileSystemModel>
 #include <QTreeWidgetItem>
+#include <QStringListModel>
 
 #define APP_NAME QString("读写助手")
 #define COUNT_WORD_MSG(num) (QString("本章字数：%1").arg(num))
@@ -34,7 +37,7 @@
 #define NOTE_DIR        (QString("./data/note/"))
 #define NOTE_CONTENT    (QString("./data/note/content.txt"))
 #define SETTING_FILE    (QString("./data/setting.txt"))
-
+#define WORD_LIST_FILE    (QString("./data/wordlist.txt"))
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -60,7 +63,7 @@ private:
     QLabel *label_count_word;
     bool is_modefied;
     bool auto_set_focus;
-    QHash<Chapter*,QTextEdit*> opened_chapters;
+    QHash<Chapter*,TextEdit*> opened_chapters;
 
     QString background_color_sheet;         //背景颜色
     QTextCharFormat fmt;                    //字体格式
@@ -70,7 +73,7 @@ private:
     QString the_key_showing;                //当前右侧窗口显示的笔记所属的key
 
     //获取当前编辑页面
-    QTextEdit *current_page();
+    TextEdit *current_page();
     //在某一章内检索
     void search_in_textedit(Chapter *c, QString key_word);
     //显示检索结果
@@ -148,18 +151,23 @@ private slots:
     void on_replace_current_btn_clicked();
     void on_replace_all_btn_clicked();
     //摘录
+    void export_note_to_list_file();
+    void pop_up_to_add_note(QString the_content_to_add_note);
     void add_note(QString key,QString content);
+    void show_key_content(QString key);
     void on_auto_focus_checkBox_stateChanged(int arg1);//自动聚焦到key编辑框
     void on_note_key_LineEdit_returnPressed();
     void on_note_save_btn_clicked();
     void on_note_renew_key_list_btn_clicked();
     void on_node_rm_row_btn_clicked();
-    void on_note_key_listWidget_itemClicked(QListWidgetItem *item);
-    void on_node_rm_key_btn_clicked();
     void on_node_edit_note_btn_clicked();
     void on_note_select_row_spinBox_valueChanged(int arg1);
     void on_note_content_LineEdit_returnPressed();
     void on_note_content_search_returnPressed();
     void on_L_tabWidget_currentChanged(int index);
+    void on_note_content_showing_font_size_valueChanged(int arg1);
+    void on_note_key_listWidget_customContextMenuRequested(const QPoint &pos);
+    void on_note_key_listWidget_itemDoubleClicked(QListWidgetItem *item);
+    void on_note_search_key_lineEdit_returnPressed();
 };
 #endif // MAINWINDOW_H

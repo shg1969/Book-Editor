@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>705</width>
-    <height>556</height>
+    <height>620</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -301,7 +301,7 @@
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <property name="spacing">
-          <number>1</number>
+          <number>0</number>
          </property>
          <property name="leftMargin">
           <number>0</number>
@@ -328,7 +328,7 @@
             <number>2</number>
            </property>
            <property name="verticalSpacing">
-            <number>2</number>
+            <number>6</number>
            </property>
            <item row="0" column="0">
             <widget class="QLabel" name="note_key_Label">
@@ -361,12 +361,26 @@
              </property>
             </widget>
            </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_5">
+             <property name="text">
+              <string>搜索key</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QLineEdit" name="note_search_key_lineEdit">
+             <property name="placeholderText">
+              <string>回车后搜索</string>
+             </property>
+            </widget>
+           </item>
           </layout>
          </item>
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout">
            <property name="spacing">
-            <number>2</number>
+            <number>6</number>
            </property>
            <item>
             <widget class="QPushButton" name="note_save_btn">
@@ -385,17 +399,18 @@
           </layout>
          </item>
          <item>
-          <widget class="QPushButton" name="node_rm_key_btn">
-           <property name="text">
-            <string>  删除当前索引</string>
+          <widget class="QSplitter" name="splitter">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
            </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QListWidget" name="note_key_listWidget">
-           <property name="contextMenuPolicy">
-            <enum>Qt::ActionsContextMenu</enum>
-           </property>
+           <widget class="QListWidget" name="note_key_listWidget">
+            <property name="contextMenuPolicy">
+             <enum>Qt::CustomContextMenu</enum>
+            </property>
+            <property name="alternatingRowColors">
+             <bool>false</bool>
+            </property>
+           </widget>
           </widget>
          </item>
         </layout>
@@ -729,9 +744,6 @@
    <property name="text">
     <string>另存为</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+Shift+S</string>
-   </property>
   </action>
   <action name="actionClose">
    <property name="icon">
@@ -740,9 +752,6 @@
    </property>
    <property name="text">
     <string>关闭本书</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+Shift+C</string>
    </property>
   </action>
   <action name="actionRemove">
@@ -753,9 +762,6 @@
    <property name="text">
     <string>删除当前书籍</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+R</string>
-   </property>
   </action>
   <action name="actionLoad">
    <property name="icon">
@@ -764,9 +770,6 @@
    </property>
    <property name="text">
     <string>从规范的TXT导入书籍</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+L</string>
    </property>
   </action>
   <action name="actionExport">
@@ -777,9 +780,6 @@
    <property name="text">
     <string>导出</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+E</string>
-   </property>
   </action>
   <action name="actionAdd_Chapter">
    <property name="icon">
@@ -788,9 +788,6 @@
    </property>
    <property name="text">
     <string>插入新章节</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+A</string>
    </property>
   </action>
   <action name="actionRemove_Chapter">
@@ -801,16 +798,10 @@
    <property name="text">
     <string>删除当前章节</string>
    </property>
-   <property name="shortcut">
-    <string>Del</string>
-   </property>
   </action>
   <action name="actionBook_info">
    <property name="text">
     <string>书籍信息</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+I</string>
    </property>
   </action>
   <action name="actionAuthor">
@@ -834,9 +825,6 @@
    <property name="text">
     <string>暗色模式</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+M</string>
-   </property>
   </action>
   <action name="actionRemove_Blank_Chapter">
    <property name="text">
@@ -859,9 +847,6 @@
    <property name="toolTip">
     <string>新建卷</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+Shift+A</string>
-   </property>
   </action>
   <action name="actionRm_volume">
    <property name="icon">
@@ -873,9 +858,6 @@
    </property>
    <property name="toolTip">
     <string>删除整卷，包括其中的章节！</string>
-   </property>
-   <property name="shortcut">
-    <string>Shift+Del</string>
    </property>
   </action>
   <action name="actionRemove_Space">
@@ -900,9 +882,6 @@
    </property>
    <property name="text">
     <string>全屏阅读</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+Shift+O</string>
    </property>
   </action>
   <action name="action_edit_chapter">
