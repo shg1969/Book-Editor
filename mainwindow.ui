@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>705</width>
-    <height>620</height>
+    <width>709</width>
+    <height>649</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -433,7 +433,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>705</width>
+     <width>709</width>
      <height>29</height>
     </rect>
    </property>
@@ -501,6 +501,13 @@
     <addaction name="actionDark_Mode"/>
     <addaction name="separator"/>
     <addaction name="action_read_mode"/>
+    <addaction name="separator"/>
+    <addaction name="action_read_write_mode"/>
+    <addaction name="separator"/>
+    <addaction name="action_Margin"/>
+    <addaction name="separator"/>
+    <addaction name="action_line_high"/>
+    <addaction name="separator"/>
    </widget>
    <addaction name="menuBook"/>
    <addaction name="menuEdit"/>
@@ -609,31 +616,10 @@
      </property>
      <item>
       <layout class="QGridLayout" name="gridLayout_2">
-       <item row="0" column="1">
-        <widget class="QSpinBox" name="note_select_row_spinBox">
-         <property name="minimum">
-          <number>1</number>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="3">
-        <widget class="QPushButton" name="node_edit_note_btn">
-         <property name="text">
-          <string>编辑</string>
-         </property>
-        </widget>
-       </item>
        <item row="0" column="2">
         <widget class="QPushButton" name="node_rm_row_btn">
          <property name="text">
           <string>删除</string>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>选择:</string>
          </property>
         </widget>
        </item>
@@ -644,17 +630,38 @@
          </property>
         </widget>
        </item>
-       <item row="1" column="1">
-        <widget class="QLineEdit" name="note_content_search">
-         <property name="placeholderText">
-          <string/>
-         </property>
-        </widget>
-       </item>
        <item row="1" column="2">
         <widget class="QLabel" name="label_4">
          <property name="text">
           <string>字体大小:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="3">
+        <widget class="QPushButton" name="node_edit_note_btn">
+         <property name="text">
+          <string>编辑</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>选择:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QSpinBox" name="note_select_row_spinBox">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="note_content_search">
+         <property name="placeholderText">
+          <string/>
          </property>
         </widget>
        </item>
@@ -696,6 +703,9 @@
    </attribute>
    <addaction name="actionDark_Mode"/>
    <addaction name="action_read_mode"/>
+   <addaction name="action_read_write_mode"/>
+   <addaction name="action_Margin"/>
+   <addaction name="action_line_high"/>
   </widget>
   <action name="actionOpen">
    <property name="icon">
@@ -890,6 +900,27 @@
    </property>
    <property name="toolTip">
     <string>调整章节所属</string>
+   </property>
+  </action>
+  <action name="action_read_write_mode">
+   <property name="text">
+    <string>R/W</string>
+   </property>
+   <property name="toolTip">
+    <string>设置阅读模式或编辑模式</string>
+   </property>
+  </action>
+  <action name="action_Margin">
+   <property name="text">
+    <string>边距</string>
+   </property>
+   <property name="toolTip">
+    <string>设置文本框内文本边距</string>
+   </property>
+  </action>
+  <action name="action_line_high">
+   <property name="text">
+    <string>行距</string>
    </property>
   </action>
  </widget>

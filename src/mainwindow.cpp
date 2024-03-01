@@ -54,6 +54,11 @@ MainWindow::MainWindow(QWidget *parent)
         f.close();
     }
 
+    auto_set_focus=0;
+    R_W_mode=0;
+    text_margin=49;
+    line_height=45;
+//    letter_space=45;
     //载入配置信息
     readSettings();
 
@@ -62,7 +67,10 @@ MainWindow::MainWindow(QWidget *parent)
     //    setWindowFlags(windowFlags()&~(Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint));
     showMaximized();
 
-    auto_set_focus=0;
+    label_rw_mode=new QLabel(this);
+    on_action_read_write_mode_triggered();
+    this->ui->statusBar->addPermanentWidget(label_rw_mode);
+
     setWindowTitle(APP_NAME);
 
     //关闭搜索结果窗口
@@ -128,7 +136,9 @@ MainWindow::MainWindow(QWidget *parent)
     is_modefied=0;
     search_option=0;
 
-//    on_actionDark_Mode_triggered(0);
+    //打开上次打开的章节
+    for(auto i:last_opened_chapter)
+        open_chapter(book.chapter_at(i.first,i.second));
 }
 
 MainWindow::~MainWindow()
@@ -244,25 +254,6 @@ TextEdit *MainWindow::current_page()
     }
 }
 
-//void MainWindow::mergeFormatOnWordOrSelection(const QTextCharFormat &format)
-//{
-//    //获取光标
-//    if(current_page()==Q_NULLPTR)return;
-//    QTextCursor cursor = current_page()->textCursor();
-//    //如果光标没选中文本
-//    if (!cursor.hasSelection())
-//        cursor.select(QTextCursor::WordUnderCursor);//选中“”单词块”（连续的字母）
-//    //光标选中了文本,改变光标所选字符的格式，设置后续输入字符的格式
-//    cursor.mergeCharFormat(format);
-
-//    auto current_edit=current_page();
-//    if(current_edit==Q_NULLPTR)
-//        return;
-//    current_edit->mergeCurrentCharFormat(format);
-//    auto a=QString(current_page()->toPlainText());
-//    current_page()->setText(a);
-//}
-
 void MainWindow::on_actionNew_triggered()
 {
     if(is_modefied)
@@ -294,8 +285,6 @@ void MainWindow::refresh()
         ui->tabWidget->removeTab(index);
         index=ui->tabWidget->currentIndex();
     }
-    //清空打开记录
-    opened_chapters.clear();
     //更新书架
     renew_file_browse_tree();
     //更新目录
@@ -391,14 +380,8 @@ void MainWindow::renew_word_num_showing()
         label_count_word->setText(COUNT_WORD_MSG(0));
         return;
     }
-    auto str=w->toPlainText();
-    int count=0;
-    for(auto i:str)
-    {
-        if(!i.isSpace())
-            count++;
-    }
-    label_count_word->setText(COUNT_WORD_MSG(count));
+
+    label_count_word->setText(COUNT_WORD_MSG(w->get_letter_number()));
 }
 
 void MainWindow::renew_file_browse_tree()
@@ -432,12 +415,50 @@ void MainWindow::renew_file_browse_tree()
     ui->file_browse_listWidget->setIconSize(QSize(50,100));
 }
 
+void MainWindow::open_chapter(Chapter *chapter_p)
+{
+    if(chapter_p==Q_NULLPTR)return;
+    if(chapter_p->get_tab_pointer()==Q_NULLPTR)
+    {
+        TextEdit *new_tab=new TextEdit(R_W_mode,this);
+        new_tab->document()->setDocumentMargin(text_margin);
+        new_tab->setAcceptRichText(0);
+        chapter_p->open(new_tab);
+        if(!last_opened_chapter.contains({chapter_p->vol_index,chapter_p->chapter_index}))
+            last_opened_chapter.push_back({chapter_p->vol_index,chapter_p->chapter_index});
+
+        ui->tabWidget->addTab(new_tab,chapter_p->name);
+        new_tab->setText(chapter_p->txt,line_height);
+        connect(new_tab,&TextEdit::undoAvailable,[this]{
+            is_modefied=1;
+            renew_tab_name();
+            renew_word_num_showing();
+        });
+        //自动聚焦
+        connect(new_tab,&TextEdit::selectionChanged,[this]{
+            auto current_edit=current_page();
+            if(current_edit==Q_NULLPTR)return;
+            ui->note_content_LineEdit->setText(current_edit->textCursor().selectedText());
+
+            if(auto_set_focus==0)return;
+            ui->note_key_LineEdit->setFocus();
+            ui->note_key_LineEdit->selectAll();
+        });
+    }
+    ui->tabWidget->setCurrentWidget(chapter_p->get_tab_pointer());
+    ui->tabWidget->currentWidget()->setFocus();
+    renew_word_num_showing();
+}
+
 void MainWindow::on_actionSave_triggered()
 {
     //更新正文
-    for(auto &i:opened_chapters.keys())
+    for(auto i=0;i<ui->tabWidget->count();i++)
     {
-        i->txt=opened_chapters[i]->toPlainText();
+        auto tab=dynamic_cast<TextEdit*>(ui->tabWidget->widget(i));
+        Chapter*c=book.find_chapter(tab);
+        if(c!=Q_NULLPTR)
+            c->txt=tab->toPlainText();
     }
     //更新分卷
     book.volume_names.clear();
@@ -463,8 +484,13 @@ void MainWindow::on_actionSave_as_triggered()
         if(ans==QMessageBox::Yes)
         {
             //将编辑框内的内容写入book对应的内存
-            for(auto &i:opened_chapters.keys())
-                i->txt=opened_chapters[i]->toPlainText();
+            for(auto i=0;i<ui->tabWidget->count();i++)
+            {
+                auto tab=dynamic_cast<TextEdit*>(ui->tabWidget->widget(i));
+                Chapter*c=book.find_chapter(tab);
+                if(c!=Q_NULLPTR)
+                    c->txt=tab->toPlainText();
+            }
         }
     }
     book.save_as();
@@ -507,6 +533,9 @@ void MainWindow::on_actionQt_triggered()
 
 void MainWindow::on_tabWidget_tabCloseRequested(int index)
 {
+    Chapter* obj_chapter=book.find_chapter(dynamic_cast<TextEdit*>(ui->tabWidget->widget(index)));
+    if(obj_chapter==Q_NULLPTR)return;
+
     if(ui->tabWidget->count()<=0)return;
     //将编辑过的内容加载到内存
     if(ui->tabWidget->tabText(index).left(2)=="* ")
@@ -514,13 +543,12 @@ void MainWindow::on_tabWidget_tabCloseRequested(int index)
         auto ans=QMessageBox::question(Q_NULLPTR,"关闭章节","该章节内容经过了编辑，是否保存到内存（更未保存到文件）");
         if(ans==QMessageBox::Yes)
         {
-            auto w=dynamic_cast<TextEdit*>(ui->tabWidget->widget(index));
-            auto key=opened_chapters.key(w);
-            key->txt=w->toPlainText();
-            opened_chapters.remove(key);
+            obj_chapter->close(1,ui->tabWidget);
+            return;
         }
     }
-    ui->tabWidget->removeTab(index);
+    obj_chapter->close(0,ui->tabWidget);
+    last_opened_chapter.removeOne({obj_chapter->vol_index,obj_chapter->chapter_index});
 }
 
 void MainWindow::on_tabWidget_currentChanged(int index)
@@ -528,13 +556,9 @@ void MainWindow::on_tabWidget_currentChanged(int index)
     Q_UNUSED(index);
     if(ui->tabWidget->count()<=0)return;
     //统计本章字数
-    auto str=dynamic_cast<TextEdit*>(ui->tabWidget->currentWidget())->toPlainText();
-    int count=0;
-    for(auto i:str)
-    {
-        if(!i.isSpace())
-            count++;
-    }
+    auto w=current_page();
+    if(w==Q_NULLPTR)return;
+    w->set_line_height(line_height);
     renew_word_num_showing();
     //同步文字显示格式
     renew_viewport_format();
@@ -630,7 +654,7 @@ void MainWindow::on_actionAdd_Chapter_triggered()
         if(ui->show_volume_checkBox->isChecked())
         {
             auto child=new QTreeWidgetItem({edit_name.text()});
-            child->setData(0,Qt::UserRole,QVariant::fromValue(&book.chapter_at(volume_index,chapter_index)));
+            child->setData(0,Qt::UserRole,QVariant::fromValue(book.chapter_at(volume_index,chapter_index)));
             ui->dir_treeWidget->topLevelItem(volume_index)->insertChild(chapter_index,child);
         }
         else
@@ -670,11 +694,8 @@ void MainWindow::on_actionRemove_Chapter_triggered()
     auto ans=QMessageBox::warning(Q_NULLPTR,"删除章节","确认要删除以下章节吗？\n“"
                                           +chapter_p->name+"”",QMessageBox::Yes|QMessageBox::No);
     if(ans!=QMessageBox::Yes)return;
-    //关闭对应的Tab
-    ui->tabWidget->setCurrentWidget(opened_chapters[chapter_p]);
-    ui->tabWidget->removeTab(ui->tabWidget->currentIndex());
-    //从打开章节的记录中删除
-    opened_chapters.remove(chapter_p);
+    //关闭章节
+    chapter_p->close(0,ui->tabWidget);
     //从书籍数据结构中删除
     book.rm_chapter(*chapter_p);
     //更新目录
@@ -702,10 +723,9 @@ void MainWindow::on_actionRemove_Blank_Chapter_triggered()
             }
             if(count==0)
             {
-                //关闭相对应的页面
-                ui->tabWidget->removeTab(ui->tabWidget->indexOf(opened_chapters[&c]));
-                opened_chapters.remove(&c);
-                //删除章节
+                //关闭章节
+                c.close(0,ui->tabWidget);
+                //删除
                 book.rm_chapter(c);
             }
         }
@@ -727,7 +747,7 @@ void MainWindow::on_actionAdd_Blank_Lines_triggered()
         {
             str+=i+"\n\n";
         }
-        edit->setText(str);
+        edit->setText(str,line_height);
     }
     is_modefied=1;
 }
@@ -744,7 +764,7 @@ void MainWindow::on_actionRemove_Space_triggered()
             if(i.isSpace()&&i!='\n')continue;
             s+=i;
         }
-        edit->setText(s);
+        edit->setText(s,line_height);
     }
     is_modefied=1;
 }
@@ -793,7 +813,7 @@ void MainWindow::search_in_textedit(Chapter *c,QString key_word)
 //    fmt.setForeground(font_col);
 //    fmt.setBackground(back_col);
 
-    if(!opened_chapters.contains(c))//对于未打开浏览的章节
+    if(c->get_tab_pointer()==Q_NULLPTR)//对于未打开浏览的章节
     {
         //获取源文本
         auto src=QTextEdit(c->txt,Q_NULLPTR).toPlainText();
@@ -820,7 +840,7 @@ void MainWindow::search_in_textedit(Chapter *c,QString key_word)
     }
     else                            //对于已经打开的章节
     {
-        auto current_edit_win=opened_chapters[c];
+        auto current_edit_win=c->get_tab_pointer();
         //获取源文本
         auto src=current_edit_win->toPlainText();
 //        //获取光标
@@ -986,19 +1006,19 @@ void MainWindow::on_search_treeWidget_itemClicked(QTreeWidgetItem *item, int col
     qDebug()<<"次序"<<apparence_count<<endl;
 
     //打开章节
-    if(!opened_chapters.contains(c_p))
+    if(c_p->get_tab_pointer()==Q_NULLPTR)
     {
-        TextEdit *new_tab=new TextEdit(this);
-        opened_chapters.insert(c_p,new_tab);
+        TextEdit *new_tab=new TextEdit(1,this);
+        c_p->open(new_tab);
         ui->tabWidget->addTab(new_tab,c_p->name);
-        new_tab->setText(c_p->txt);
-        connect(new_tab,&TextEdit::textChanged,[this]{
+        new_tab->setText(c_p->txt,line_height);
+        connect(new_tab,&TextEdit::undoAvailable,[this]{
             is_modefied=1;
             renew_tab_name();
             renew_word_num_showing();
         });
     }
-    auto textedit=opened_chapters[c_p];
+    auto textedit=c_p->get_tab_pointer();
     //重置光标位置
     auto cursor=textedit->textCursor();
     cursor.setPosition(0);
@@ -1152,9 +1172,9 @@ void MainWindow::on_replace_all_btn_clicked()
                 c.txt+=ui->obj_kew_edit->text()+s[i];
             }
 
-            if(opened_chapters.contains(&c))
+            if(c.get_tab_pointer()!=Q_NULLPTR)
             {
-                opened_chapters[&c]->setText(c.txt);
+                c.get_tab_pointer()->setText(c.txt,line_height);
             }
         }
     }
@@ -1228,37 +1248,6 @@ void MainWindow::show_key_content(QString key)
     ui->note_textEdit->setText(s);
     ui->show_nodes_dockWidget->show();
 }
-/*
-void MainWindow::on_dir_listWidget_itemClicked(QListWidgetItem *item)
-{
-    auto chapter_p=item->data(Qt::UserRole).value<Chapter*>();
-    if(chapter_p==Q_NULLPTR)return;
-    qDebug()<<chapter_p->name;
-
-    if(!opened_chapters.contains(chapter_p))
-    {
-        QTextEdit *new_tab=new QTextEdit(this);
-        new_tab->setAcceptRichText(0);
-        opened_chapters.insert(chapter_p,new_tab);
-        ui->tabWidget->addTab(new_tab,chapter_p->name);
-        new_tab->setText(chapter_p->txt);
-        //更新字数显示
-        show_word_num();
-        connect(new_tab,&QTextEdit::textChanged,[this]{emit this->chapter_modified();});
-        //自动聚焦
-        connect(new_tab,&QTextEdit::selectionChanged,[this]{
-            auto current_edit=current_page();
-            if(current_edit==Q_NULLPTR)return;
-            ui->note_content_LineEdit->setText(current_edit->textCursor().selectedText());
-
-            if(auto_set_focus==0)return;
-            ui->note_key_LineEdit->setFocus();
-            ui->note_key_LineEdit->selectAll();
-        });
-    }
-    ui->tabWidget->setCurrentWidget(opened_chapters[chapter_p]);
-    ui->tabWidget->currentWidget()->setFocus();
-}*/
 
 void MainWindow::on_note_key_LineEdit_returnPressed()
 {
@@ -1386,7 +1375,7 @@ void MainWindow::on_actionDelete_bank_row_triggered()
             if(i.isEmpty())continue;
             s+=i+'\n';
         }
-        edit->setText(s);
+        edit->setText(s,line_height);
     }
     is_modefied=1;
 }
@@ -1415,40 +1404,12 @@ void MainWindow::on_note_content_LineEdit_returnPressed()
 void MainWindow::on_dir_treeWidget_itemClicked(QTreeWidgetItem *item, int column)
 {
     column=0;
-
     auto chapter_p=item->data(column,Qt::UserRole).value<Chapter*>();
     if(chapter_p==Q_NULLPTR)return;
-    qDebug()<<chapter_p->name;
-
-    if(!opened_chapters.contains(chapter_p))
-    {
-        TextEdit *new_tab=new TextEdit(this);
-
-        new_tab->setAcceptRichText(0);
-        opened_chapters.insert(chapter_p,new_tab);
-        ui->tabWidget->addTab(new_tab,chapter_p->name);
-        new_tab->setText(chapter_p->txt);
-        connect(new_tab,&TextEdit::textChanged,[this]{
-            is_modefied=1;
-            renew_tab_name();
-            renew_word_num_showing();
-        });
-        //自动聚焦
-        connect(new_tab,&TextEdit::selectionChanged,[this]{
-            auto current_edit=current_page();
-            if(current_edit==Q_NULLPTR)return;
-            ui->note_content_LineEdit->setText(current_edit->textCursor().selectedText());
-
-            if(auto_set_focus==0)return;
-            ui->note_key_LineEdit->setFocus();
-            ui->note_key_LineEdit->selectAll();
-        });
-    }
-    ui->tabWidget->setCurrentWidget(opened_chapters[chapter_p]);
-    ui->tabWidget->currentWidget()->setFocus();
-    renew_word_num_showing();
+    open_chapter(chapter_p);
 }
 
+//章节目录处右击
 void MainWindow::on_dir_treeWidget_customContextMenuRequested(const QPoint &pos)
 {
     pos.x();
@@ -1465,6 +1426,7 @@ void MainWindow::on_dir_treeWidget_customContextMenuRequested(const QPoint &pos)
     menu.addAction(ui->actionAuto_subchapter);
     menu.addAction(ui->action_edit_chapter);
 
+    //重命名
     connect(act_modify,&QAction::triggered,[&]{
         bool ok=0;
 
@@ -1489,10 +1451,10 @@ void MainWindow::on_dir_treeWidget_customContextMenuRequested(const QPoint &pos)
             else
             {
                 ui->dir_treeWidget->currentItem()->setText(0,res);
-                if(opened_chapters.contains(chapter_p))
+                if(chapter_p->get_tab_pointer()!=Q_NULLPTR)
                 {
                     auto old_page= ui->tabWidget->currentIndex();
-                    ui->tabWidget->setCurrentWidget(opened_chapters[chapter_p]);
+                    ui->tabWidget->setCurrentWidget(chapter_p->get_tab_pointer());
                     ui->tabWidget->setTabText(ui->tabWidget->currentIndex(),"* "+res);
                     ui->tabWidget->setCurrentIndex(old_page);
                 }
@@ -1661,11 +1623,17 @@ void MainWindow::on_actionExport_triggered()
         if(ans==QMessageBox::Yes)
         {
             //将编辑框内的内容写入book对应的内存
-            for(auto &i:opened_chapters.keys())
-                i->txt=opened_chapters[i]->toPlainText();
+            for(auto &v:book.data)//每一卷
+            {
+                for(auto &c:v)
+                {
+                    if(c.get_tab_pointer()!=Q_NULLPTR)
+                        c.txt=c.get_tab_pointer()->toPlainText();
+                }
+            }
         }
     }
-    TextEdit edit;
+    QTextEdit edit;
     auto res=QFileDialog::getSaveFileName(Q_NULLPTR,"另存为","./","*.pdf");
     if(res.size()==0)
         return;
@@ -1706,12 +1674,31 @@ void MainWindow::writeSettings()
     int vol=0,ch=0;
     if(current_page()!=Q_NULLPTR)
     {
-        auto c=opened_chapters.key(current_page());
-        vol=c->vol_index;
-        ch=c->chapter_index;
+        auto c=book.find_chapter(current_page());
+        if(c!=Q_NULLPTR)
+        {
+            vol=c->vol_index;
+            ch=c->chapter_index;
+        }
+        else
+        {
+            vol=0;
+            ch=0;
+        }
     }
     out<<vol;
     out<<ch;
+    out<<this->text_margin;
+    out<<this->line_height;
+    out<<this->R_W_mode;
+    out<<auto_set_focus;
+
+    out<<last_opened_chapter.size();
+    for(auto i:last_opened_chapter)
+    {
+        out<<i.first;
+        out<<i.second;
+    }
     f.close();
 }
 
@@ -1740,25 +1727,48 @@ void MainWindow::readSettings()
     int vol=0,ch=0;
     In>>vol;
     In>>ch;
+    In>>this->text_margin;
+    In>>this->line_height;
+    In>>this->R_W_mode;
+    In>>auto_set_focus;
 
+    int size=0;
+    In>>size;
+    for(int i=0;i<size;i++)
+    {
+        int temp_vol=0;
+        int temp_ch=0;
+        In>>temp_vol;
+        In>>temp_ch;
+        if(!last_opened_chapter.contains({temp_vol,temp_ch}))last_opened_chapter.push_back({temp_vol,temp_ch});
+    }
+
+    /*********************************读取完毕，完成相关设置*****************************************/
+    //设置是否打开自动聚焦
+    if(auto_set_focus)ui->auto_focus_checkBox->setChecked(auto_set_focus);
+    //打开上次打开的书籍、章节
     if(last_book.size()&&!last_book.contains("undifine")&&book.info.name!=last_book)
     {
         book.open(TOP_DIR+last_book);
         if(book.info.name!=last_book)return;
         set_saved_flag();
         refresh();
+        //展开上次展开的卷目录
         if(book.data.size()>vol&&book.data[vol].size()>ch)
         {
             auto vol_item=ui->dir_treeWidget->topLevelItem(vol);
             vol_item->setExpanded(1);
             ui->dir_treeWidget->scrollToItem(vol_item->child(ch));
         }
-        f.close();
     }
+
+    f.close();
+
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    writeSettings();
     if(is_modefied)
     {
         auto ans=QMessageBox::warning(this,"警告","有未保存的更改，是否舍弃这些更改？",QMessageBox::Yes|QMessageBox::No);
@@ -1784,9 +1794,14 @@ void MainWindow::on_action_read_mode_triggered()
         dialog.setLayout(&layout);
         layout.setMargin(0);
 
-        QTextEdit reader(&dialog);
+        TextEdit reader(1,&dialog);
+
         reader.setContextMenuPolicy(Qt::CustomContextMenu);
-        reader.setText(w->toPlainText());
+        reader.setText(w->toPlainText(),line_height);
+
+        reader.document()->setDocumentMargin(text_margin);
+        reader.setReadOnly(R_W_mode);
+
         reader.setCurrentCharFormat(fmt);
         reader.setStyleSheet(background_color_sheet);
 
@@ -1799,8 +1814,7 @@ void MainWindow::on_action_read_mode_triggered()
 
         dialog.showMaximized();
 
-        auto chapter_base=opened_chapters.key(current_page());
-        auto chapter_current=chapter_base;
+        auto chapter_current=book.find_chapter(current_page());
         if(chapter_current==Q_NULLPTR)return;
 
         connect(&reader,&QDialog::customContextMenuRequested,[&]
@@ -1854,7 +1868,7 @@ void MainWindow::on_action_read_mode_triggered()
                 {
                     chapter_current=&book.data[v][c-1];
                 }
-                reader.setText(chapter_current->txt);
+                reader.setText(chapter_current->txt,line_height);
             });
 
             connect(next_chapter,&QAction::triggered,[&]{
@@ -1868,7 +1882,7 @@ void MainWindow::on_action_read_mode_triggered()
                 {
                     chapter_current=&book.data[v][c+1];
                 }
-                reader.setText(chapter_current->txt);
+                reader.setText(chapter_current->txt,line_height);
             });
             connect(exit,&QAction::triggered,[&]{
                 dialog.close();
@@ -2072,12 +2086,6 @@ void MainWindow::on_note_content_search_returnPressed()
     }
 }
 
-void MainWindow::on_L_tabWidget_currentChanged(int index)
-{
-    if(index!=2)return;
-    on_note_renew_key_list_btn_clicked();
-}
-
 void MainWindow::on_note_content_showing_font_size_valueChanged(int arg1)
 {
     auto cursor=ui->note_textEdit->textCursor();
@@ -2141,11 +2149,14 @@ void MainWindow::on_note_key_listWidget_itemDoubleClicked(QListWidgetItem *item)
 {
     //从表中获取数据
     QString note_key=item->data(Qt::DisplayRole).toString();
+    the_key_showing=note_key;
     show_key_content(note_key);
 }
 
 void MainWindow::on_note_search_key_lineEdit_returnPressed()
 {
+    //先刷新列表再搜索
+    on_note_renew_key_list_btn_clicked();
     auto obj_key=ui->note_search_key_lineEdit->text();
     if(obj_key.size()==0)return;
     for(int i=ui->note_key_listWidget->count()-1;i>=0;i--)
@@ -2160,3 +2171,152 @@ void MainWindow::on_note_search_key_lineEdit_returnPressed()
         }
     }
 }
+
+void MainWindow::on_action_read_write_mode_triggered()
+{
+    R_W_mode=!R_W_mode;
+    if(R_W_mode)//阅读模式
+    {
+        label_rw_mode->setText(" Read-Mode ");
+//        label_rw_mode->setStyleSheet("background:rgb(220,180,180)");
+    }
+    else
+    {
+        label_rw_mode->setText(" Write-Mode ");
+//        label_rw_mode->setStyleSheet("background:rgb(180,220,180)");
+    }
+    auto w=current_page();
+    if(w!=Q_NULLPTR)
+            w->setReadOnly(R_W_mode);
+}
+
+void MainWindow::on_action_Margin_triggered()
+{
+    int temp_margin=4;
+    auto current_w=current_page();
+    if(current_w!=Q_NULLPTR)
+        text_margin=current_w->document()->documentMargin();
+
+    QDialog w;
+    w.resize(450,100);
+    QVBoxLayout layout(&w);
+    w.setWindowTitle("设置边距");
+    QSpinBox box;
+    layout.addWidget(&box);
+
+    if(current_w!=Q_NULLPTR)
+        box.setRange(1,current_w->document()->textWidth()/2);
+    else
+        box.setRange(1,50);
+    if(text_margin>1)
+        box.setValue(text_margin);
+
+    QHBoxLayout btn(&w);
+    layout.addLayout(&btn);
+    QPushButton ok;
+    btn.addWidget(&ok);
+    ok.setText("确认");
+    QPushButton cancel;
+    btn.addWidget(&cancel);
+    cancel.setText("取消");
+
+    connect(&box,static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged),[&temp_margin,current_w](int i){
+        if(current_w!=Q_NULLPTR)
+            current_w->document()->setDocumentMargin(i);
+        temp_margin=i;
+    });
+
+    connect(&cancel,&QPushButton::clicked,[current_w,this,&w]{
+        current_w->document()->setDocumentMargin(text_margin);
+        w.close();
+    });
+    connect(&ok,&QPushButton::clicked,[&temp_margin,current_w,this,&w]{
+        this->text_margin=temp_margin;
+        current_w->document()->setDocumentMargin(text_margin);
+        w.close();
+    });
+    w.exec();
+}
+
+void MainWindow::on_action_line_high_triggered()
+{
+    auto current_w=current_page();
+
+    QDialog w;
+    w.resize(450,100);
+    QVBoxLayout layout(&w);
+    w.setWindowTitle("设置行距");
+    QSpinBox box;
+    layout.addWidget(&box);
+    box.setRange(1,100);
+    box.setValue(line_height);
+
+    QHBoxLayout btn(&w);
+    layout.addLayout(&btn);
+    QPushButton ok;
+    btn.addWidget(&ok);
+    ok.setText("确认");
+    QPushButton cancel;
+    btn.addWidget(&cancel);
+    cancel.setText("取消");
+
+    connect(&box,static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged),[current_w](int i){
+        if(current_w!=Q_NULLPTR)
+            current_w->set_line_height(i);
+    });
+
+    connect(&cancel,&QPushButton::clicked,[current_w,this,&w]{
+        if(current_w!=Q_NULLPTR)
+            current_w->set_line_height(line_height);
+        w.close();
+    });
+    connect(&ok,&QPushButton::clicked,[&box,current_w,this,&w]{
+        this->line_height=box.value();
+        if(current_w!=Q_NULLPTR)
+            current_w->set_line_height(line_height);
+        w.close();
+    });
+    w.exec();
+}
+
+
+//void MainWindow::on_action_letter_space_triggered()
+//{
+//    auto current_w=current_page();
+//    QDialog w;
+//    w.resize(450,100);
+//    QVBoxLayout layout(&w);
+//    w.setWindowTitle("设置字距");
+//    QSpinBox box;
+//    layout.addWidget(&box);
+//    box.setRange(1,200);
+//    box.setValue(100);
+
+//    QHBoxLayout btn(&w);
+//    layout.addLayout(&btn);
+//    QPushButton ok;
+//    btn.addWidget(&ok);
+//    ok.setText("确认");
+//    QPushButton cancel;
+//    btn.addWidget(&cancel);
+//    cancel.setText("取消");
+
+//    connect(&box,static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged),[current_w](int i){
+//        if(current_w!=Q_NULLPTR)
+//            current_w->set_letter_space(i);
+//    });
+
+//    connect(&cancel,&QPushButton::clicked,[current_w,&w]{
+//        if(current_w!=Q_NULLPTR)
+//            current_w->set_letter_space(100);
+//        w.close();
+//    });
+//    connect(&ok,&QPushButton::clicked,[&box,current_w,this,&w]{
+//        this->letter_space=box.value();
+//        if(current_w!=Q_NULLPTR)
+//            current_w->set_letter_space(letter_space);
+//        w.close();
+//    });
+//    w.exec();
+//}
+

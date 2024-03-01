@@ -21,6 +21,8 @@
 #include<QFileDialog>
 #include<QDataStream>
 #include<QDataStream>
+#include"textedit.h"
+#include<QTabWidget>
 
 //软件数据的存放顶层路径
 #define TOP_DIR (QString("./data/books/"))
@@ -42,12 +44,19 @@ public:
     //将章节信息通过数据流对象写入文件
     void write(QDataStream &Out);
 
+    void close(bool save,QTabWidget *container);
+    void open(TextEdit*p);
+    TextEdit*get_tab_pointer(void);
+
+
     bool operator==(const Chapter c);
     int vol_index;      //卷标
     int chapter_index;  //章序
     QString name;       //章节名
     QString txt;        //正文
     Search_Result context_of_results;//存储每一个搜索结果的上下文以及出现的次序
+private:
+    TextEdit *edit_tab;
 };
 
 //为QVariant登记自定义类型
@@ -85,7 +94,7 @@ public:
     //插入新章节
     void insert_chapter(int volume_index,int chapter_index,QString Name,QString TXT="");
     //获取某个章节的引用
-    Chapter& chapter_at(int volume_index,int chapter_index);
+    Chapter* chapter_at(int volume_index,int chapter_index);
     //在最后一卷追加章节
     void add_chapter(QString Name,QString TXT="");
     //删除章节
@@ -100,6 +109,8 @@ public:
     bool rename(QString new_name);
     //对src自动分卷、分章
     void auto_subchapter(const QString &src);
+
+    Chapter *find_chapter(TextEdit *p);
 
     Book_Info info;                                     //书籍信息
     QVector<QTreeWidgetItem*>  volume_top_level_item;   //每一卷的顶项

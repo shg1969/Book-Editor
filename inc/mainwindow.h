@@ -61,16 +61,19 @@ private:
     Ui::MainWindow *ui;
     Book book;
     QLabel *label_count_word;
+    QLabel *label_rw_mode;
     bool is_modefied;
     bool auto_set_focus;
-    QHash<Chapter*,TextEdit*> opened_chapters;
-
+    QVector<QPair<int,int>> last_opened_chapter;//最后展开的卷、章节号
     QString background_color_sheet;         //背景颜色
     QTextCharFormat fmt;                    //字体格式
-
     int search_option;                      //0:对当前章节正文，1：对全书章节名，2：对全书正文
     QHash<QString,QStringList> key_notes;   //每个QStringList为一个key本身和与key对应的笔记的集合
     QString the_key_showing;                //当前右侧窗口显示的笔记所属的key
+    bool R_W_mode;                          //读写模式
+    int text_margin;                        //文本编辑框内的文本边距
+    int line_height;                          //文本编辑框内的文本行距
+//    int letter_space;                       //文本编辑框内的文本字距
 
     //获取当前编辑页面
     TextEdit *current_page();
@@ -85,12 +88,12 @@ private:
     void renew_viewport_format(int size);
     void renew_viewport_format(QColor font_color);
     void renew_viewport_format(const QString &font_family);
-
+    //刷新主窗口标题
     void renew_window_title();
     //读写配置信息
     void writeSettings();
     void readSettings();
-
+    //窗口关闭事件
     void closeEvent(QCloseEvent *event);
 
 private slots:
@@ -100,6 +103,8 @@ private slots:
     void renew_word_num_showing();      //刷新当前页面的字数显示
     void renew_tab_name(void);;         //刷新已打开tab页面的名称
     void renew_file_browse_tree();      //刷新书架内容
+
+    void open_chapter(Chapter *chapter_p);
     //书籍
     void on_actionOpen_triggered();     //打开
     void on_actionNew_triggered();      //新建
@@ -164,10 +169,13 @@ private slots:
     void on_note_select_row_spinBox_valueChanged(int arg1);
     void on_note_content_LineEdit_returnPressed();
     void on_note_content_search_returnPressed();
-    void on_L_tabWidget_currentChanged(int index);
     void on_note_content_showing_font_size_valueChanged(int arg1);
     void on_note_key_listWidget_customContextMenuRequested(const QPoint &pos);
     void on_note_key_listWidget_itemDoubleClicked(QListWidgetItem *item);
     void on_note_search_key_lineEdit_returnPressed();
+    void on_action_read_write_mode_triggered();
+    void on_action_Margin_triggered();
+    void on_action_line_high_triggered();
+//    void on_action_letter_space_triggered();
 };
 #endif // MAINWINDOW_H

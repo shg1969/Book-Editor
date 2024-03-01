@@ -196,6 +196,18 @@ void Book::auto_subchapter(const QString &src)
     add_chapter(last_chapter_name,doc);
 }
 
+Chapter *Book::find_chapter(TextEdit *p)
+{
+    Chapter *c_p=Q_NULLPTR;
+    if(p==Q_NULLPTR)return Q_NULLPTR;
+
+    for(auto &v:data)
+        for(auto &c:v)
+            if(c.get_tab_pointer()==p)
+                c_p=&c;
+    return c_p;
+}
+
 void Book::load()
 {
     //取得txt文件的路径
@@ -410,9 +422,12 @@ void Book::insert_chapter(int volume_index, int chapter_index, QString Name, QSt
     }
 }
 
-Chapter &Book::chapter_at(int volume_index, int chapter_index)
+Chapter *Book::chapter_at(int volume_index, int chapter_index)
 {
-    return data[volume_index][chapter_index];
+    if(volume_index>=data.size()||chapter_index>=data[volume_index].size())
+        return Q_NULLPTR;
+    Chapter &c=data[volume_index][chapter_index];
+    return &c;
 }
 
 void Book::add_chapter(QString Name, QString TXT)
@@ -495,6 +510,7 @@ Chapter::Chapter(int Vol_index,int Chapter_index,QString Name, QString TXT, Sear
     name=Name;
     txt=TXT;
     context_of_results=Result;
+    edit_tab=Q_NULLPTR;
 }
 
 
@@ -504,6 +520,7 @@ Chapter::Chapter(QDataStream &In)
     In>>chapter_index;
     In>>name;
     In>>txt;
+    edit_tab=Q_NULLPTR;
 }
 
 void Chapter::write(QDataStream &Out)
@@ -512,6 +529,30 @@ void Chapter::write(QDataStream &Out)
     Out<<chapter_index;
     Out<<name;
     Out<<txt;
+}
+
+void Chapter::close(bool save,QTabWidget *container)
+{
+    //保存
+    if(save)
+        txt=edit_tab->toPlainText();
+    //关闭页面
+    if(container!=Q_NULLPTR&&edit_tab!=Q_NULLPTR)
+    {
+        container->removeTab(container->indexOf(edit_tab));
+        delete edit_tab;
+    }
+    edit_tab=Q_NULLPTR;
+}
+
+void Chapter::open(TextEdit *p)
+{
+    edit_tab=p;
+}
+
+TextEdit *Chapter::get_tab_pointer()
+{
+    return edit_tab;
 }
 
 bool Chapter::operator==(const Chapter c)
