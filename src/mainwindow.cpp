@@ -1708,6 +1708,10 @@ void MainWindow::readSettings()
     if(!f.open(QIODevice::ReadOnly))
     {
         QMessageBox::warning(Q_NULLPTR,"错误","打开配置文件失败！");
+        text_margin=40;
+        line_height=45;
+        R_W_mode=1;
+        auto_set_focus=1;
         return;
     }
     QDataStream In(&f);
@@ -1728,7 +1732,9 @@ void MainWindow::readSettings()
     In>>vol;
     In>>ch;
     In>>this->text_margin;
+    if(text_margin<1)text_margin=40;
     In>>this->line_height;
+    if(line_height<10)line_height=45;
     In>>this->R_W_mode;
     In>>auto_set_focus;
 
@@ -1785,6 +1791,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
 void MainWindow::on_action_read_mode_triggered()
 {
     auto w=current_page();
+
     if(w!=Q_NULLPTR)
     {
         QDialog dialog(Q_NULLPTR,Qt::FramelessWindowHint);
