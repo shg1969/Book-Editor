@@ -1415,6 +1415,8 @@ void MainWindow::on_dir_treeWidget_customContextMenuRequested(const QPoint &pos)
     pos.x();
     QMenu menu;
     auto act_modify=menu.addAction("重命名");
+    menu.addAction(ui->action_add_comment);
+    menu.addAction(ui->actionadd_imitating);
     menu.addSeparator();
     menu.addAction(ui->actionAdd_Chapter);
     menu.addAction(ui->actionRemove_Chapter);
@@ -2327,3 +2329,149 @@ void MainWindow::on_action_line_high_triggered()
 //    w.exec();
 //}
 
+
+void MainWindow::on_dir_tabWidget_tabBarClicked(int index)
+{
+    if(index==1)
+    {
+        qDebug()<<"查看笔记页";
+        ui->chapter_note_listWidget->clear();
+        for(auto &v:book.data)
+            for(auto &c:v)
+                if(c.comment.size())
+                {
+                    auto new_item=new QListWidgetItem(c.name,ui->chapter_note_listWidget);
+                    new_item->setData(Qt::UserRole,QVariant::fromValue(&c));
+                }
+    }
+    else if(index==2)
+    {
+        qDebug()<<"查看仿写页";
+        ui->chapter_imitating_listWidget->clear();
+        for(auto &v:book.data)
+            for(auto &c:v)
+                if(c.imitating.size())
+                {
+                    auto new_item=new QListWidgetItem(c.name,ui->chapter_imitating_listWidget);
+                    new_item->setData(Qt::UserRole,QVariant::fromValue(&c));
+                }
+    }
+}
+
+void MainWindow::open_chapter_comment(Chapter *chapter_p)
+{
+    if(chapter_p==Q_NULLPTR)
+    {
+        QMessageBox::warning(Q_NULLPTR,"错误","选择无效章节");
+        return;
+    }
+    QDialog *w=new QDialog;
+    w->setWindowFlags(Qt::CustomizeWindowHint|Qt::WindowTitleHint);
+    w->setWindowTitle("章节笔记@"+chapter_p->name);
+    w->resize(800,600);
+
+    auto main_layout=new QVBoxLayout(w);
+    main_layout->setMargin(0);
+    QPushButton *ok=new QPushButton("确认",w);
+    QPushButton *cancel=new QPushButton("取消",w);
+
+    auto edit=new QTextEdit(w);
+    edit->setFontPointSize(16);
+    main_layout->addWidget(edit);
+    edit->setFocus();
+
+    auto btn_layout=new QHBoxLayout;
+    btn_layout->setMargin(2);
+    main_layout->addLayout(btn_layout);
+    btn_layout->addWidget(ok);
+    btn_layout->addWidget(cancel);
+    edit->setText(chapter_p->comment);
+
+    w->deleteLater();
+    w->setWindowModality(Qt::WindowModal);
+    connect(ok,&QPushButton::clicked,[chapter_p,edit,w]{
+        chapter_p->comment=edit->toPlainText();
+        w->close();
+    });
+    connect(cancel,&QPushButton::clicked,[w]{
+        w->close();
+    });
+    connect(w,&QTextEdit::destroyed,[]{qDebug()<<"dialog is distoryed.";});
+    connect(btn_layout,&QHBoxLayout::destroyed,[]{qDebug()<<"btn_layout is distoryed.";});
+    w->exec();
+}
+
+void MainWindow::open_chapter_imitating(Chapter*chapter_p)
+{
+    if(chapter_p==Q_NULLPTR)
+    {
+        QMessageBox::warning(Q_NULLPTR,"错误","选择无效章节");
+        return;
+    }
+    QDockWidget *w=chapter_p->getAdd_imitating();
+
+    if(chapter_p->getAdd_imitating()!=Q_NULLPTR)
+    {
+        w->show();
+        return ;
+    }
+    else
+        w=new QDockWidget("仿写@"+chapter_p->name,this);
+    w->setAllowedAreas(Qt::AllDockWidgetAreas);
+    addDockWidget(Qt::RightDockWidgetArea,w);
+    w->resize(1000,800);
+
+    QWidget *group_widget=new QWidget(w);
+    w->setWidget(group_widget);
+    auto main_layout=new QVBoxLayout(group_widget);
+    main_layout->setMargin(0);
+    auto edit=new QTextEdit(w);
+    edit->setFontPointSize(16);
+    edit->setFocus();
+    edit->setText(chapter_p->imitating);
+    edit->setFocus();
+    main_layout->addWidget(edit);
+
+    auto btn_layout=new QHBoxLayout;
+    btn_layout->setMargin(2);
+    main_layout->addLayout(btn_layout);
+
+    QPushButton *ok=new QPushButton("确认",w);
+    QPushButton *cancel=new QPushButton("取消",w);
+    btn_layout->addWidget(ok);
+    btn_layout->addWidget(cancel);
+
+    connect(ok,&QPushButton::clicked,[chapter_p,edit,w]{
+        chapter_p->imitating=edit->toPlainText();
+        w->close();
+        w->deleteLater();
+    });
+    connect(cancel,&QPushButton::clicked,[w]{
+        w->close();
+        w->deleteLater();
+    });
+    connect(btn_layout,&QHBoxLayout::destroyed,[]{qDebug()<<"btn_layout is distoryed.";});
+}
+void MainWindow::on_action_add_comment_triggered()
+{
+    auto chapter_p=ui->dir_treeWidget->currentItem()->data(0,Qt::UserRole).value<Chapter*>();
+    open_chapter_comment(chapter_p);
+}
+
+void MainWindow::on_actionadd_imitating_triggered()
+{
+    auto chapter_p=ui->dir_treeWidget->currentItem()->data(0,Qt::UserRole).value<Chapter*>();
+    open_chapter_imitating(chapter_p);
+}
+
+void MainWindow::on_chapter_note_listWidget_itemDoubleClicked(QListWidgetItem *item)
+{
+    auto chapter_p=item->data(Qt::UserRole).value<Chapter*>();
+    open_chapter_comment(chapter_p);
+}
+
+void MainWindow::on_chapter_imitating_listWidget_itemDoubleClicked(QListWidgetItem *item)
+{
+    auto chapter_p=item->data(Qt::UserRole).value<Chapter*>();
+    open_chapter_imitating(chapter_p);
+}

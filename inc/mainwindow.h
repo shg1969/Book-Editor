@@ -96,6 +96,8 @@ private:
     //窗口关闭事件
     void closeEvent(QCloseEvent *event);
 
+    void open_chapter_comment(Chapter *chapter_p);
+    void open_chapter_imitating(Chapter *chapter_p);
 private slots:
     //自定义
     void refresh();                     //整个软件的显示全部刷新一遍
@@ -177,5 +179,10 @@ private slots:
     void on_action_Margin_triggered();
     void on_action_line_high_triggered();
 //    void on_action_letter_space_triggered();
+    void on_dir_tabWidget_tabBarClicked(int index);
+    void on_action_add_comment_triggered();
+    void on_actionadd_imitating_triggered();
+    void on_chapter_note_listWidget_itemDoubleClicked(QListWidgetItem *item);
+    void on_chapter_imitating_listWidget_itemDoubleClicked(QListWidgetItem *item);
 };
 #endif // MAINWINDOW_H

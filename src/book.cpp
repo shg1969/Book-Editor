@@ -49,7 +49,13 @@ void Book::open(QString book_dir)
 
     //开始读入
     //先将书籍信息读入
-    info.read(In);
+    if(0>info.read(In))
+    {
+        QMessageBox::warning(Q_NULLPTR,"打开书籍","打开书籍失败");
+        return;
+    }
+    qDebug()<<info.name<<"_版本号："<<info.version;
+
     //读入章节数
     int count=0;
     QString temp_str;
@@ -65,7 +71,7 @@ void Book::open(QString book_dir)
     data.clear();
     while(!In.atEnd())
     {
-        Chapter c(In);
+        Chapter c(In,info.version);
         if(c.vol_index>data.size()-1)
         {
             data.push_back(QList<Chapter>());
@@ -511,20 +517,33 @@ Chapter::Chapter(int Vol_index,int Chapter_index,QString Name, QString TXT, Sear
     txt=TXT;
     context_of_results=Result;
     edit_tab=Q_NULLPTR;
+    add_imitating=Q_NULLPTR;
 }
 
-
-Chapter::Chapter(QDataStream &In)
+Chapter::Chapter(QDataStream &In,int version)
 {
-    In>>vol_index;
-    In>>chapter_index;
-    In>>name;
-    In>>txt;
+    switch(version)
+    {
+    case 1:
+        In>>comment;
+        In>>imitating;
+    case 0:
+        In>>vol_index;
+        In>>chapter_index;
+        In>>name;
+        In>>txt;
+        break;
+    default:
+        name="读取错误：版本号错误！";
+    }
     edit_tab=Q_NULLPTR;
+    add_imitating=Q_NULLPTR;
 }
 
 void Chapter::write(QDataStream &Out)
 {
+    Out<<comment;
+    Out<<imitating;
     Out<<vol_index;
     Out<<chapter_index;
     Out<<name;
@@ -543,6 +562,7 @@ void Chapter::close(bool save,QTabWidget *container)
         delete edit_tab;
     }
     edit_tab=Q_NULLPTR;
+    add_imitating=Q_NULLPTR;
 }
 
 void Chapter::open(TextEdit *p)
@@ -566,6 +586,11 @@ bool Chapter::operator==(const Chapter c)
         return 0;
 }
 
+QDockWidget *Chapter::getAdd_imitating() const
+{
+    return add_imitating;
+}
+
 Book_Info::Book_Info()
 {
     //获取已存在书籍信息
@@ -581,10 +606,32 @@ Book_Info::Book_Info()
     name="undefine"+QString::number(count);//命名临时文档
     //默认封面
     picture=QPixmap::fromImage(QImage(":/bmp/book.bmp"));
+
+    version=1;
 }
 
-void Book_Info::read(QDataStream &In)
+//返回版本号,失败返回-1
+int Book_Info::read(QDataStream &In)
 {
+    QString version_flag;
+    In>>version_flag;
+    if(version_flag.contains(BOOK_VERSION_0.right(14)))
+    {
+        bool ok=0;
+        version=version_flag.left(1).toInt(&ok);
+        if(!ok)
+        {
+            return -1;
+        }
+    }
+    else
+    {
+        auto dev=In.device();
+        if(!dev->reset())
+            return -1;
+        version=0;
+    }
+
     In>>name;
     In>>description;
     In>>picture;
@@ -593,10 +640,13 @@ void Book_Info::read(QDataStream &In)
         //默认封面
         picture=QPixmap::fromImage(QImage(":/bmp/book.bmp"));
     }
+
+    return version;
 }
 
 void Book_Info::write(QDataStream &Out)
 {
+    Out<<BOOK_VERSION_1;
     Out<<name;
     Out<<description;
     Out<<picture;
@@ -604,6 +654,8 @@ void Book_Info::write(QDataStream &Out)
 
 void Book_Info::clear()
 {
+    //版本
+    version=1;
     //获取已存在书籍信息
     auto list=QDir(TOP_DIR).entryInfoList();
     int count=0;

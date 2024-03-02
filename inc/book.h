@@ -23,6 +23,7 @@
 #include<QDataStream>
 #include"textedit.h"
 #include<QTabWidget>
+#include<QDockWidget>
 
 //软件数据的存放顶层路径
 #define TOP_DIR (QString("./data/books/"))
@@ -30,6 +31,9 @@
 #define TEXT_DIR (QString("C:/Users/lei/Desktop/读书/经典/"))
 //获取图片文件的默认打开路径
 #define PICTURE_DIR (QString("C:/Users/lei/Desktop/pictures/"))
+//书籍版本
+#define BOOK_VERSION_0 (QString("0_***version_&&&***"))
+#define BOOK_VERSION_1 (QString("1_***version_&&&***"))
 
 //保存章节内对key的搜索结果的数据结构，每一条QPair为一项，其中包含搜索结果的上下文QString，和该结果在本章内出现的次序
 typedef QVector<QPair<QString,int>> Search_Result;
@@ -40,7 +44,7 @@ public:
     //初始化函数
     Chapter(int Vol_index=0,int Chapter_index=0,QString Name="0",QString TXT="",Search_Result Result=Search_Result());
     //用输入流对象来初始化，该In对象必须为只读类型的QDataStream对象
-    Chapter(QDataStream &In);
+    Chapter(QDataStream &In,int version);
     //将章节信息通过数据流对象写入文件
     void write(QDataStream &Out);
 
@@ -55,8 +59,13 @@ public:
     QString name;       //章节名
     QString txt;        //正文
     Search_Result context_of_results;//存储每一个搜索结果的上下文以及出现的次序
+    QString comment;    //点评、章节笔记、任务
+    QString imitating;  //仿写
+    QDockWidget *getAdd_imitating() const;
+
 private:
     TextEdit *edit_tab;
+    QDockWidget* add_imitating;
 };
 
 //为QVariant登记自定义类型
@@ -67,8 +76,8 @@ class Book_Info
 {
 public:
     Book_Info();
-    //通过数据流对象读入书籍信息
-    void read(QDataStream &In);
+    //通过数据流对象读入书籍信息,返回版本号，失败返回-1
+    int read(QDataStream &In);
     //将书籍信息通过数据流对象写入文件
     void write(QDataStream &Out);
     //清空书籍信息，使其回到初始状态
@@ -76,6 +85,7 @@ public:
     QString name;           //书名
     QPixmap picture;        //封面
     QString description;    //简介
+    int version;            //每更新本文件中的各类的成员就更新一次默认version及相应的读写函数，版本依次升高
 };
 class Book
 {
