@@ -22,13 +22,13 @@ QTextEdit{
     background-color: rgb(20,20,20);
 }
  QCheckBox {
-	color: white;
-	spacing: 5px;
+        color: white;
+        spacing: 5px;
   }
 QComboBox,QSpinBox{
         height :28px;
-      	background: rgb(80,70,80);
-	color: white;
+        background: rgb(80,70,80);
+        color: white;
 }
 QMainWindow,QMenu {
       background: grey;
@@ -66,7 +66,7 @@ QTreeView::item{
 }
 
   QTreeView::item:hover {
-	color:black;
+        color:black;
       background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #e7effd, stop: 1 #cbdaf1);
       border: 1px solid #bfcde4;
   }
@@ -142,3 +142,69 @@ QToolButton {
       width:45px;
       background-color:transparent;
   }
+QScrollBar
+{
+       border: 1px;
+       background: transparent;
+       width: 6px;
+}
+
+QScrollBar::handle
+{
+       background-color: rgba(180,205,208);
+       min-height: 30px;
+          border-radius:3px;
+          width: 6px;
+   }
+
+QScrollBar::add-line
+{
+       border: none;
+       height: 2px;
+ }
+
+ QScrollBar::sub-line
+{
+       border: none;
+       height: 2px;
+}
+QScrollBar::sub-line
+{
+       border: none;
+       height: 2px;
+}
+
+QScrollBar::add-page,QScrollBar::sub-page
+ {
+        background:transparent;
+      border-radius:3px;
+}
+
+QDockWidget {
+    border: 4px solid lightgray;
+    color:white;
+}
+
+QDockWidget::title {
+    text-align: left;
+    background:rgb(50,60,70);
+    padding: 5px;
+}
+
+QDockWidget::close-button, QDockWidget::float-button {
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 0px;
+}
+
+QDockWidget::close-button:hover, QDockWidget::float-button:hover {
+    background: gray;
+}
+
+QDockWidget::close-button:pressed, QDockWidget::float-button:pressed {
+    padding: 1px 1px 1px 1px;
+}
+QTextEdit{
+    background:rgb(56,60,50);
+    color:white;
+}

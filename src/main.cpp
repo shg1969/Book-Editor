@@ -7,15 +7,6 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     MainWindow w;
 
-    QFile f("C:/Users/lei/Desktop/study_pro/GIthub/Book-Editor/conf/style_sheet_dark.txt");
-    f.open(QIODevice::ReadOnly);
-    QString s_dark=f.readAll();
-    QTextStream In_1(&f);
-    while(!f.atEnd())
-    {
-        In_1>>s_dark;
-    }
-    f.close();
 
     QFile f_light("C:/Users/lei/Desktop/study_pro/GIthub/Book-Editor/conf/style_sheet_light.txt");
     f_light.open(QIODevice::ReadOnly);
@@ -28,7 +19,28 @@ int main(int argc, char *argv[])
     f_light.close();
     a.setStyleSheet(s_light);
 
-    w.connect(&w,&MainWindow::theme_changed,[&a,s_dark,s_light](bool mode){
+    w.connect(&w,&MainWindow::theme_changed,[&a](bool mode){
+        QFile f("C:/Users/lei/Desktop/study_pro/GIthub/Book-Editor/conf/style_sheet_dark.txt");
+        f.open(QIODevice::ReadOnly);
+        QString s_dark=f.readAll();
+        QTextStream In_1(&f);
+        while(!f.atEnd())
+        {
+            In_1>>s_dark;
+        }
+        f.close();
+
+
+        QFile f_light("C:/Users/lei/Desktop/study_pro/GIthub/Book-Editor/conf/style_sheet_light.txt");
+        f_light.open(QIODevice::ReadOnly);
+        QString s_light=f_light.readAll();
+        QTextStream In_2(&f_light);
+        while(!f_light.atEnd())
+        {
+            In_2>>s_light;
+        }
+        f_light.close();
+
         qDebug()<<"主题改变";
         if(mode)
         {
