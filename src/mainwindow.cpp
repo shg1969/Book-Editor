@@ -648,7 +648,7 @@ void MainWindow::on_actionAdd_Chapter_triggered()
     connect(&ok,&QPushButton::clicked,[&]{
         if(!edit_name.text().size())return;
         //添加到书籍
-        book.insert_chapter(volume_index,chapter_index,edit_name.text(),edit_txt.toPlainText());
+        book.insert_chapter(Chapter(volume_index,chapter_index,edit_name.text(),edit_txt.toPlainText()));
         w.close();
         //更新目录
         if(ui->show_volume_checkBox->isChecked())
@@ -2474,4 +2474,74 @@ void MainWindow::on_chapter_imitating_listWidget_itemDoubleClicked(QListWidgetIt
 {
     auto chapter_p=item->data(Qt::UserRole).value<Chapter*>();
     open_chapter_imitating(chapter_p);
+}
+
+void MainWindow::on_actionget_chapter_notes_triggered()
+{
+    QString res,temp;
+
+    for(auto v:book.data)
+        for(auto c:v)
+        {
+            if(c.comment.size())
+            {
+                temp.resize(100);
+                res+='\n'+temp.fill('-',(50-c.name.size())/2)
+                        +c.name
+                        +temp.fill('-',50-temp.size()-c.name.size())
+                        +"\n\n"
+                        +c.comment+"\n\n"  ;
+            }
+        }
+
+    if(res.size()==0)
+    {
+        QMessageBox::warning(Q_NULLPTR,"警告","无相关记录");
+        return;
+    }
+    auto file_name=QFileDialog::getSaveFileName(Q_NULLPTR,"导出笔记","../../","*.txt");
+    if(file_name.size()==0)return;
+    QFile f(file_name);
+    if(!f.open(QIODevice::WriteOnly))
+    {
+        QMessageBox::warning(Q_NULLPTR,"错误","打开文件失败");
+        return;
+    }
+    QTextStream Out(&f);
+    Out<<res;
+    f.close();
+}
+
+void MainWindow::on_actionget_chapter_imitating_triggered()
+{
+    QString res,temp;
+    for(auto v:book.data)
+        for(auto c:v)
+        {
+            if(c.imitating.size())
+            {
+                temp.resize(100);
+                res+='\n'+temp.fill('-',(50-c.name.size())/2)
+                        +c.name
+                        +temp.fill('-',50-temp.size()-c.name.size())
+                        +"\n\n"
+                        +c.imitating+"\n\n"  ;
+            }
+        }
+    if(res.size()==0)
+    {
+        QMessageBox::warning(Q_NULLPTR,"警告","无相关记录");
+        return;
+    }
+    auto file_name=QFileDialog::getSaveFileName(Q_NULLPTR,"导出仿写记录","../../","*.txt");
+    if(file_name.size()==0)return;
+    QFile f(file_name);
+    if(!f.open(QIODevice::WriteOnly))
+    {
+        QMessageBox::warning(Q_NULLPTR,"错误","打开文件失败");
+        return;
+    }
+    QTextStream Out(&f);
+    Out<<res;
+    f.close();
 }

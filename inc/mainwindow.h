@@ -184,5 +184,7 @@ private slots:
     void on_actionadd_imitating_triggered();
     void on_chapter_note_listWidget_itemDoubleClicked(QListWidgetItem *item);
     void on_chapter_imitating_listWidget_itemDoubleClicked(QListWidgetItem *item);
+    void on_actionget_chapter_notes_triggered();
+    void on_actionget_chapter_imitating_triggered();
 };
 #endif // MAINWINDOW_H

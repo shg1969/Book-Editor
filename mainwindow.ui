@@ -545,6 +545,10 @@
     <addaction name="actionDelete_bank_row"/>
     <addaction name="separator"/>
     <addaction name="actionAuto_subchapter"/>
+    <addaction name="separator"/>
+    <addaction name="actionget_chapter_notes"/>
+    <addaction name="separator"/>
+    <addaction name="actionget_chapter_imitating"/>
    </widget>
    <widget class="QMenu" name="menu">
     <property name="title">
@@ -983,6 +987,16 @@
   <action name="actionadd_imitating">
    <property name="text">
     <string>添加仿写</string>
+   </property>
+  </action>
+  <action name="actionget_chapter_notes">
+   <property name="text">
+    <string>提取章节笔记</string>
+   </property>
+  </action>
+  <action name="actionget_chapter_imitating">
+   <property name="text">
+    <string>提取本书仿写记录</string>
    </property>
   </action>
  </widget>

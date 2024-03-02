@@ -76,7 +76,7 @@ void Book::open(QString book_dir)
         {
             data.push_back(QList<Chapter>());
         }
-        add_chapter(c.name,c.txt);
+        add_chapter(c.name,c.txt,c.comment,c.imitating);
     }
     f.close();
 }
@@ -410,20 +410,19 @@ void Book::clear_search_result()
     }
 }
 
-void Book::insert_chapter(int volume_index, int chapter_index, QString Name, QString TXT)
+void Book::insert_chapter(Chapter c)
 {
-    Chapter c(volume_index,chapter_index,Name,TXT);
-    if(volume_index<0||volume_index>=data.size())
+    if(c.vol_index<0||c.vol_index>=data.size())
         return;
-    if(chapter_index<0||chapter_index>data[volume_index].size())
+    if(c.chapter_index<0||c.chapter_index>data[c.vol_index].size())
         return;
-    data[volume_index].insert(chapter_index,c);
+    data[c.vol_index].insert(c.chapter_index,c);
 
     //更新相关卷序号和章序号
     int i=0;
-    for(auto &c:data[volume_index])
+    for(auto &j:data[c.vol_index])
     {
-        c.chapter_index=i;
+        j.chapter_index=i;
         i++;
     }
 }
@@ -436,10 +435,11 @@ Chapter *Book::chapter_at(int volume_index, int chapter_index)
     return &c;
 }
 
-void Book::add_chapter(QString Name, QString TXT)
+void Book::add_chapter(QString Name, QString TXT,QString comment,QString imitating)
 {
+    Chapter c(data.size()-1,data[data.size()-1].size(),Name,TXT,comment,imitating);
     if(Name.size()==0)return;
-    insert_chapter(data.size()-1,data[data.size()-1].size(),Name,TXT);
+    insert_chapter(c);
 }
 
 void Book::rm_chapter(const Chapter &c)
@@ -509,7 +509,9 @@ bool Book::rename(QString new_name)
     return 1;
 }
 
-Chapter::Chapter(int Vol_index,int Chapter_index,QString Name, QString TXT, Search_Result Result)
+Chapter::Chapter(int Vol_index,int Chapter_index,
+                 QString Name, QString TXT, QString Comment,QString Imitating,
+                 Search_Result Result)
 {
     vol_index=Vol_index;
     chapter_index=Chapter_index;
@@ -518,6 +520,8 @@ Chapter::Chapter(int Vol_index,int Chapter_index,QString Name, QString TXT, Sear
     context_of_results=Result;
     edit_tab=Q_NULLPTR;
     add_imitating=Q_NULLPTR;
+    comment=Comment;
+    imitating=Imitating;
 }
 
 Chapter::Chapter(QDataStream &In,int version)

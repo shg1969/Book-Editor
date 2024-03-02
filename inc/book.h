@@ -42,7 +42,9 @@ typedef QVector<QPair<QString,int>> Search_Result;
 class Chapter{
 public:
     //初始化函数
-    Chapter(int Vol_index=0,int Chapter_index=0,QString Name="0",QString TXT="",Search_Result Result=Search_Result());
+    Chapter(int Vol_index=0,int Chapter_index=0,QString Name="0",
+            QString TXT="",QString comment="",QString imitating="",
+            Search_Result Result=Search_Result());
     //用输入流对象来初始化，该In对象必须为只读类型的QDataStream对象
     Chapter(QDataStream &In,int version);
     //将章节信息通过数据流对象写入文件
@@ -102,11 +104,11 @@ public:
     void clear_search_result(); //清除每一章内储存的搜索结果
 
     //插入新章节
-    void insert_chapter(int volume_index,int chapter_index,QString Name,QString TXT="");
+    void insert_chapter(Chapter c);
     //获取某个章节的引用
     Chapter* chapter_at(int volume_index,int chapter_index);
     //在最后一卷追加章节
-    void add_chapter(QString Name,QString TXT="");
+    void add_chapter(QString Name,QString TXT="",QString comment="",QString imitating="");
     //删除章节
     void rm_chapter(const Chapter &c);
     //在末尾添加卷
