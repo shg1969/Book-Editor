@@ -75,6 +75,9 @@ private:
     int line_height;                          //文本编辑框内的文本行距
 //    int letter_space;                       //文本编辑框内的文本字距
 
+    QCompleter *completer;
+    QStringList wordList;
+
     //获取当前编辑页面
     TextEdit *current_page();
     //在某一章内检索
@@ -140,6 +143,8 @@ private slots:
     //edit_Tab
     void on_tabWidget_tabCloseRequested(int index);
     void on_tabWidget_currentChanged(int index);
+    //双击tab名，弹出菜单以打开comment或仿写
+    void on_tabWidget_tabBarDoubleClicked(int index);
 
     //书架
     void on_file_browse_listWidget_itemDoubleClicked(QListWidgetItem *item);
@@ -186,5 +191,6 @@ private slots:
     void on_chapter_imitating_listWidget_itemDoubleClicked(QListWidgetItem *item);
     void on_actionget_chapter_notes_triggered();
     void on_actionget_chapter_imitating_triggered();
+    void on_note_key_listWidget_itemClicked(QListWidgetItem *item);
 };
 #endif // MAINWINDOW_H

@@ -5,6 +5,7 @@
 #include <QSizePolicy>
 #include <QPoint>
 
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -61,11 +62,6 @@ MainWindow::MainWindow(QWidget *parent)
 //    letter_space=45;
     //载入配置信息
     readSettings();
-
-    //最大化显示
-    //    setWindowFlags(windowFlags()&~Qt::WindowMaximizeButtonHint& ~Qt::WindowMinimizeButtonHint);
-    //    setWindowFlags(windowFlags()&~(Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint));
-    showMaximized();
 
     label_rw_mode=new QLabel(this);
     on_action_read_write_mode_triggered();
@@ -136,9 +132,24 @@ MainWindow::MainWindow(QWidget *parent)
     is_modefied=0;
     search_option=0;
 
+    for(auto i:key_notes)
+    {
+        wordList<<i[0];
+    }
+    completer = new QCompleter(wordList, this);
+    completer->setCaseSensitivity(Qt::CaseInsensitive);
+    ui->note_key_LineEdit->setCompleter(completer);
+
+
     //打开上次打开的章节
     for(auto i:last_opened_chapter)
         open_chapter(book.chapter_at(i.first,i.second));
+
+    //最大化显示
+    //    setWindowFlags(windowFlags()&~Qt::WindowMaximizeButtonHint& ~Qt::WindowMinimizeButtonHint);
+    //    setWindowFlags(windowFlags()&~(Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint));
+    showMaximized();
+
 }
 
 MainWindow::~MainWindow()
@@ -1219,10 +1230,18 @@ void MainWindow::add_note(QString key, QString content)
 //    content+="\n\t:——"+book.info.name;
     if(key_notes.contains(key))
     {
-        key_notes[key].append(content);
+        if(!key_notes[key].contains(content))
+            key_notes[key].append(content);
     }
     else
     {
+        wordList<<key;
+        auto old_completer=completer;
+        completer = new QCompleter(wordList, this);
+        completer->setCaseSensitivity(Qt::CaseInsensitive);
+        ui->note_key_LineEdit->setCompleter(completer);
+        old_completer->deleteLater();
+
         key_notes[key].append(key);
         key_notes[key].append(content);
         ui->note_key_listWidget->addItem(key);
@@ -1244,7 +1263,6 @@ void MainWindow::show_key_content(QString key)
         count++;
     }
     //将所选key填入到编辑框
-    ui->note_key_LineEdit->setText(the_key_showing);
     ui->note_textEdit->setText(s);
     ui->show_nodes_dockWidget->show();
 }
@@ -1304,6 +1322,7 @@ void MainWindow::on_node_rm_row_btn_clicked()
         s+="\n----"+QString::number(count)+"----\n"+i;
         count++;
     }
+    ui->note_select_row_spinBox->setRange(0,key_notes[the_key_showing].size()-1);
     ui->note_textEdit->setText(s);
     ui->show_nodes_dockWidget->show();
 
@@ -2544,4 +2563,21 @@ void MainWindow::on_actionget_chapter_imitating_triggered()
     QTextStream Out(&f);
     Out<<res;
     f.close();
+}
+
+void MainWindow::on_note_key_listWidget_itemClicked(QListWidgetItem *item)
+{
+    ui->note_key_LineEdit->setText(item->text());
+    ui->note_key_LineEdit->setFocus();
+}
+
+void MainWindow::on_tabWidget_tabBarDoubleClicked(int index)
+{
+    Q_UNUSED(index);
+    QMenu menu;
+
+    menu.addAction(ui->action_add_comment);
+    menu.addAction(ui->actionadd_imitating);
+
+    menu.exec(QCursor::pos());
 }
