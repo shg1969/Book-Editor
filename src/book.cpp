@@ -519,7 +519,7 @@ Chapter::Chapter(int Vol_index,int Chapter_index,
     txt=TXT;
     context_of_results=Result;
     edit_tab=Q_NULLPTR;
-    add_imitating=Q_NULLPTR;
+    dock_add_imitating=Q_NULLPTR;
     comment=Comment;
     imitating=Imitating;
 }
@@ -541,7 +541,7 @@ Chapter::Chapter(QDataStream &In,int version)
         name="读取错误：版本号错误！";
     }
     edit_tab=Q_NULLPTR;
-    add_imitating=Q_NULLPTR;
+    dock_add_imitating=Q_NULLPTR;
 }
 
 void Chapter::write(QDataStream &Out)
@@ -566,12 +566,15 @@ void Chapter::close(bool save,QTabWidget *container)
         delete edit_tab;
     }
     edit_tab=Q_NULLPTR;
-    add_imitating=Q_NULLPTR;
+    dock_add_imitating=Q_NULLPTR;
 }
 
-void Chapter::open(TextEdit *p)
+//设置显示窗口的指针，设置内容
+void Chapter::open(TextEdit *p, int line_height)
 {
     edit_tab=p;
+    edit_tab->clear();
+    edit_tab->setText(txt,line_height);
 }
 
 TextEdit *Chapter::get_tab_pointer()
@@ -592,7 +595,12 @@ bool Chapter::operator==(const Chapter c)
 
 QDockWidget *Chapter::getAdd_imitating() const
 {
-    return add_imitating;
+    return dock_add_imitating;
+}
+
+QDockWidget *Chapter::getDock_add_comment() const
+{
+    return dock_add_comment;
 }
 
 Book_Info::Book_Info()

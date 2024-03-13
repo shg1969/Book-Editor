@@ -1,170 +1,109 @@
 #ifndef NOTE_H
 #define NOTE_H
 
-#include <QWidget>
-#include <QTreeView>
-#include <QMessageBox>
-#include <QInputDialog>
-#include <QTreeWidget>
-#include <QTreeWidgetItem>
-#include <QMouseEvent>
-#include <QToolBar>
-#include <QVBoxLayout>
-#include <QMimeData>
-#include <QDrag>
-#include <QPixmap>
-#include <QListWidget>
+#include<QHash>
+#include<QStringList>
+#include<QString>
+#include<QList>
+#include<QFile>
+#include<QDataStream>
+#include<QMessageBox>
+#include<QTreeWidget>
+#include<QDebug>
+#include<QTreeWidgetItem>
 
-class Note_Tree : public QTreeWidget
+//笔记版本
+#define NOTE_VERSION_0 (QString("0_***version_&&&***"))
+//#define NOTE_VERSION_1 (QString("1_***version_&&&***"))
+
+
+class Note_Item
 {
-    Q_OBJECT
+public:
+    Note_Item(QTreeWidgetItem*item,const QString &Key_structure,QStringList Content=QStringList());
+
 
 public:
-    explicit Note_Tree(QWidget *parent = 0);
-    ~Note_Tree();
-
-private:
-
-protected:
-//    void mousePressEvent(QMouseEvent *event);      // 鼠标按下事件
-//    void dragEnterEvent(QDragEnterEvent *event);   // 拖动进入事件
-//    void dragMoveEvent(QDragMoveEvent *event);     // 拖动事件
-//    void dropEvent(QDropEvent *event);             // 放下事件  .
-
-};
-
-class Note{
-public:
-    Note(const QString &KEY,const QString &Content):key(KEY),content(Content){};
-    QString key;
-    QStringList content;
-
-    bool operator==(Note a)
+    bool operator==(const Note_Item& obj)
     {
-        if(key==a.key&&content==a.content)return 1;
-        else return 0;
-    }
-};
-
-class Notes : public QWidget
-{
-    Q_OBJECT
-public:
-    explicit Notes(QWidget *parent = nullptr);
-
-    bool contains(QString key)
-    {
-        if(key.size()==0||notes.size()==0)return 0;
-        key=key.trimmed();
-        bool res=0;
-        for(auto i:notes)
-        {
-            if(i.key==key)
-            {
-                res=1;
-                return res;
-            }
-        }
-        return res;
-    }
-
-    Note* find(const QString &KEY)
-    {
-        if(KEY.size()==0||notes.size()==0)return Q_NULLPTR;
-        for(auto &i:notes)
-        {
-            if(i.key==KEY)
-            {
-                return &i;
-            }
-        }
-        return Q_NULLPTR;
-    }
-    void clear()
-    {
-        for(auto &i:notes)
-        {
-            i.key.clear();
-            i.content.clear();
-        }
-        notes.clear();
-    }
-    bool read();
-    bool save();
-
-    void add(QString key, QString content)
-    {
-        if(key.size()==0||content.size()==0)return;
-
-        key=key.trimmed();
-        content=content.trimmed();
-
-        auto list=find(key);
-        if(list!=Q_NULLPTR)
-        {
-            list->content.append(content);
-        }
+        if(this->key_structure==obj.key_structure
+                &&this->content==obj.content)
+            return 1;
         else
-        {
-            notes.append({key,content});
-        }
+            return 0;
     }
-    void rename_key(const QString &old_key)
+    QString getKey_structure() const;
+    void setKey_structure(const QString &value);
+
+    QStringList getContent() const;
+    void setContent(const QStringList &value);
+
+    QTreeWidgetItem *getWidget_item() const;
+
+    void append(const QString &piece);
+    inline int count_piece(){return content.size();}
+    void remove_at(int i)
     {
-        auto ans=QInputDialog::getText(Q_NULLPTR,"对"+old_key+"重命名","命名为：",QLineEdit::Normal,old_key);
-        ans=ans.trimmed();
-
-        if(ans.size()==0||ans==old_key)return;
-
-        if(contains(ans))
-        {
-            QMessageBox::warning(Q_NULLPTR,"命名","名称已存在，命名无效！");
-            return;
-        }
-        auto obj=find(old_key);
-        for(int i=1;i<obj->content.size();i++)
-            add(ans,obj->content[i]);
-        notes.removeOne(*obj);
-        is_modefied=1;
+        if(i<0||i>=content.size())return;
+        content.removeAt(i);
     }
-    void remove(const QString &key)
+    void set_piece_at(int i,const QString &value)
     {
-        if(key.size()==0)return;
-        auto obj=find(key);
-        if(obj==Q_NULLPTR)return;
-        notes.removeOne(*obj);
-        is_modefied=1;
+        if(i<0||i>=content.size())return;
+        content[i]=value;
     }
-    QStringList get_key_list(const QString &key)
+    QString get_piece_at(int i)
     {
-        QStringList res;
-        if(key.size()==0)return res;
-        auto obj=find(key);
-        if(obj==Q_NULLPTR)return res;
-        for(int i=0;i<obj->content.size();i++)
-        {
-            res.push_back(obj->content[i]);
-        }
-        return res;
+        return content.value(i);
     }
-
-    void show_item(QTreeWidget *view)
+    inline QString get_key_name()
     {
-        if(view==Q_NULLPTR)return;
-        view->clear();
-
+        return key_structure.split('-').back();
     }
 
 private:
-    QList<Note> notes;   //每个QStringList为一个key本身和与key对应的笔记的集合
-    bool is_modefied;
+    QString key_structure;          //层级名：层1-层2-...层n-key
+    QStringList content;            //内容
+    QTreeWidgetItem* widget_item;   //显示窗体
+};
+Q_DECLARE_METATYPE(Note_Item*);
 
-    QToolBar *toolbar;
-    QTreeWidget *key_view;
-    QListWidget *content_view;
 
-signals:
+class Note
+{
+public:
+    Note();
 
+    bool read(QString file_dir,QTreeWidget*tree);
+    void save(QString file_dir);
+
+    Note_Item* add(const QString &lever_key,const QString &content,QTreeWidget*tree);
+    Note_Item* node_at(int i);
+    Note_Item* find_node(const QString &lever_key);
+    void rename(QString old_key,QString new_key,QTreeWidget*tree);
+//    void set_tree_widget(QTreeWidget*p);
+
+    QStringList getKey_structure() const;
+    bool contains(const QString &lever_key)
+    {
+        return key_structure.contains(lever_key);
+    }
+    void remove_at(int i)
+    {
+        if(i<0||i>data.size()-1)return;
+        delete data[i].getWidget_item();
+        data.removeAt(i);
+    }
+    void remove_one(const Note_Item &i)
+    {
+        delete i.getWidget_item();
+        data.removeOne(i);
+    }
+private:
+    Note_Item*get_item(const QString &lever_key);
+    int version;
+    QStringList key_structure;              //储存key的层级结构，以-分隔
+    QList<Note_Item> data;                  //每个QStringList为一个key本身和与key对应的笔记的集合
 };
 
 #endif // NOTE_H

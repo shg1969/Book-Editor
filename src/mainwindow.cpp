@@ -10,6 +10,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
+    completer=Q_NULLPTR;
     qDebug()<<QDir::currentPath();
     ui->setupUi(this);
     //创建必须的文件夹
@@ -40,19 +41,7 @@ MainWindow::MainWindow(QWidget *parent)
     else
     {
         //加载笔记
-        QFile f(NOTE_CONTENT);
-        f.open(QIODevice::ReadOnly);
-        QDataStream In(&f);
-        QStringList i;
-        while(!f.atEnd())
-        {
-            In>>i;
-            if(i.count())
-                key_notes[i.value(0)]=i;
-            i.clear();
-
-        }
-        f.close();
+        note.read(NOTE_CONTENT,ui->note_key_treeWidget);
     }
 
     auto_set_focus=0;
@@ -132,14 +121,7 @@ MainWindow::MainWindow(QWidget *parent)
     is_modefied=0;
     search_option=0;
 
-    for(auto i:key_notes)
-    {
-        wordList<<i[0];
-    }
-    completer = new QCompleter(wordList, this);
-    completer->setCaseSensitivity(Qt::CaseInsensitive);
-    ui->note_key_LineEdit->setCompleter(completer);
-
+    renew_completer(note.getKey_structure());
 
     //打开上次打开的章节
     for(auto i:last_opened_chapter)
@@ -154,7 +136,6 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    export_note_to_list_file();
     writeSettings();
     delete ui;
 }
@@ -240,7 +221,7 @@ void MainWindow::renew_dir()
             }
         }
     }
-    ui->statusBar->showMessage("更新目录成功！但未保存！",1000);
+    ui->statusBar->showMessage("更新目录成功！");
 }
 
 void MainWindow::on_actionLoad_triggered()
@@ -254,6 +235,7 @@ void MainWindow::on_actionLoad_triggered()
     is_modefied=1;
     refresh();
     renew_window_title();
+    ui->statusBar->showMessage("加载完毕！");
 }
 
 TextEdit *MainWindow::current_page()
@@ -283,6 +265,18 @@ void MainWindow::renew_window_title()
         setWindowTitle(APP_NAME+"@ *"+book.info.name);
     else
         setWindowTitle(APP_NAME+"@"+book.info.name);
+}
+
+void MainWindow::renew_completer(QStringList list)
+{
+    wordList<<list;
+    auto old_completer=completer;
+    completer = new QCompleter(wordList, this);
+    completer->setFilterMode(Qt::MatchContains);
+    completer->setCaseSensitivity(Qt::CaseInsensitive);
+    ui->note_key_LineEdit->setCompleter(completer);
+    ui->note_search_key_lineEdit->setCompleter(completer);
+    if(old_completer)old_completer->deleteLater();
 }
 
 void MainWindow::refresh()
@@ -439,8 +433,7 @@ void MainWindow::open_chapter(Chapter *chapter_p)
             last_opened_chapter.push_back({chapter_p->vol_index,chapter_p->chapter_index});
 
         ui->tabWidget->addTab(new_tab,chapter_p->name);
-        new_tab->setText(chapter_p->txt,line_height);
-        connect(new_tab,&TextEdit::undoAvailable,[this]{
+        connect(new_tab,&TextEdit::textChanged,[this]{
             is_modefied=1;
             renew_tab_name();
             renew_word_num_showing();
@@ -485,6 +478,7 @@ void MainWindow::on_actionSave_triggered()
     set_saved_flag();           //更新标识
     renew_file_browse_tree();   //更新书架
     on_note_save_btn_clicked(); //保存笔记
+    ui->statusBar->showMessage("保存操作完成");
 }
 
 void MainWindow::on_actionSave_as_triggered()
@@ -518,6 +512,7 @@ void MainWindow::on_actionRemove_triggered()
     book.clear();
     refresh();
     set_saved_flag();
+    ui->statusBar->showMessage("已关闭:"+book.info.name);
 }
 
 void MainWindow::on_actionClose_triggered()
@@ -672,6 +667,7 @@ void MainWindow::on_actionAdd_Chapter_triggered()
         {
             renew_dir();
         }
+        ui->statusBar->showMessage("添加章节"+edit_name.text());
         is_modefied=1;
     });
     connect(&spinbox_index,static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged),[&](int i){
@@ -705,6 +701,9 @@ void MainWindow::on_actionRemove_Chapter_triggered()
     auto ans=QMessageBox::warning(Q_NULLPTR,"删除章节","确认要删除以下章节吗？\n“"
                                           +chapter_p->name+"”",QMessageBox::Yes|QMessageBox::No);
     if(ans!=QMessageBox::Yes)return;
+
+    ui->statusBar->showMessage("添加章节"+chapter_p->name);
+
     //关闭章节
     chapter_p->close(0,ui->tabWidget);
     //从书籍数据结构中删除
@@ -1022,7 +1021,6 @@ void MainWindow::on_search_treeWidget_itemClicked(QTreeWidgetItem *item, int col
         TextEdit *new_tab=new TextEdit(1,this);
         c_p->open(new_tab);
         ui->tabWidget->addTab(new_tab,c_p->name);
-        new_tab->setText(c_p->txt,line_height);
         connect(new_tab,&TextEdit::undoAvailable,[this]{
             is_modefied=1;
             renew_tab_name();
@@ -1193,26 +1191,6 @@ void MainWindow::on_replace_all_btn_clicked()
     on_find_all_btn_clicked();
 }
 
-
-void MainWindow::export_note_to_list_file()
-{
-    QFile f(WORD_LIST_FILE);
-    if(!f.open(QIODevice::WriteOnly))
-    {
-        QMessageBox::warning(Q_NULLPTR,"打开文件","打开word list文件失败！");
-        return;
-    }
-    QDataStream Out(&f);
-    for(auto i:key_notes)
-    {
-        for(auto j=1;j<i.size();j++)
-        {
-            Out<<i[0]+':'+i[j];
-        }
-    }
-    f.close();
-}
-
 void MainWindow::pop_up_to_add_note(QString the_content_to_add_note)
 {
     auto ans=QInputDialog::getText(Q_NULLPTR,"添加笔记","索引：");
@@ -1225,44 +1203,35 @@ void MainWindow::pop_up_to_add_note(QString the_content_to_add_note)
 void MainWindow::add_note(QString key, QString content)
 {
     key=key.trimmed();
-    content=content.trimmed();
-
-//    content+="\n\t:——"+book.info.name;
-    if(key_notes.contains(key))
+    if(key.size()==0)return;
+    if(!wordList.contains(key))
     {
-        if(!key_notes[key].contains(content))
-            key_notes[key].append(content);
+        renew_completer({key});
+    }
+    if(note.add(key,content,ui->note_key_treeWidget))
+    {
+        ui->statusBar->showMessage("成功添加："+content+"-->"+key);
+//        show_key_content(note.find_node(key)->getContent());
     }
     else
-    {
-        wordList<<key;
-        auto old_completer=completer;
-        completer = new QCompleter(wordList, this);
-        completer->setCaseSensitivity(Qt::CaseInsensitive);
-        ui->note_key_LineEdit->setCompleter(completer);
-        old_completer->deleteLater();
-
-        key_notes[key].append(key);
-        key_notes[key].append(content);
-        ui->note_key_listWidget->addItem(key);
-    }
-
+        ui->statusBar->showMessage("空白无效，添加失败！");
 }
 
-void MainWindow::show_key_content(QString key)
+void MainWindow::show_key_content(const QStringList &content)
 {
+    //页面设置
     ui->note_textEdit->clear();
-    ui->note_select_row_spinBox->setRange(1,key_notes[the_key_showing].size()-1);
+    ui->note_select_row_spinBox->setRange(0,content.size()-1);
     ui->note_textEdit->setFontPointSize(ui->note_content_showing_font_size->value());
-    the_key_showing=key;
+    //获取内容
     QString s;
     int count=0;
-    for(auto &i:key_notes[the_key_showing])
+    for(auto &i:content)
     {
-        s+="\n----"+QString::number(count)+"----\n"+i;
+        s+="\n------"+QString::number(count)+"------\n"+i;
         count++;
     }
-    //将所选key填入到编辑框
+    //开始显示
     ui->note_textEdit->setText(s);
     ui->show_nodes_dockWidget->show();
 }
@@ -1278,54 +1247,17 @@ void MainWindow::on_note_key_LineEdit_returnPressed()
 
 void MainWindow::on_note_save_btn_clicked()
 {
-    QFile f(NOTE_CONTENT);
-    f.open(QIODevice::WriteOnly);
-    QDataStream Out(&f);
-    for(auto &i:key_notes)
-    {
-        Out<<i;
-    }
-    f.close();
-
-    export_note_to_list_file();
-}
-
-void MainWindow::on_note_renew_key_list_btn_clicked()
-{
-    ui->note_key_listWidget->clear();
-    QStringList a;
-
-    for(auto i:key_notes)
-    {
-        a.append(i[0]);
-    }
-    a.sort(Qt::CaseInsensitive);
-    for(auto i:a)
-    {
-        if(i.size()==0)continue;
-        ui->note_key_listWidget->addItem(i);
-    }
+    note.save(NOTE_CONTENT);
 }
 
 void MainWindow::on_node_rm_row_btn_clicked()
 {
+    //修改
+    if(!the_Item_showing)return;
     int obj=ui->note_select_row_spinBox->value();
-    key_notes[the_key_showing].removeAt(obj);
-
-    ui->note_textEdit->clear();
-    auto key=the_key_showing;
-    the_key_showing=key;
-    QString s;
-    int count=0;
-    for(auto &i:key_notes[key])
-    {
-        s+="\n----"+QString::number(count)+"----\n"+i;
-        count++;
-    }
-    ui->note_select_row_spinBox->setRange(0,key_notes[the_key_showing].size()-1);
-    ui->note_textEdit->setText(s);
-    ui->show_nodes_dockWidget->show();
-
+    the_Item_showing->remove_at(obj);
+    //刷新显示
+    show_key_content(the_Item_showing->getContent());
     is_modefied=1;
 }
 
@@ -1333,8 +1265,8 @@ void MainWindow::on_node_edit_note_btn_clicked()
 {
     int obj_index=ui->note_select_row_spinBox->value();
 
-    QString msg="编辑“"+the_key_showing+"”中的第"+QString::number(obj_index)+"项";
-    QString old_str=key_notes[the_key_showing][obj_index];
+    QString msg="编辑“"+the_Item_showing->get_key_name()+"”中的第"+QString::number(obj_index)+"项";
+    QString old_str=the_Item_showing->get_piece_at(obj_index);
 
     QDialog dialog;
     dialog.setWindowTitle(msg);
@@ -1353,16 +1285,13 @@ void MainWindow::on_node_edit_note_btn_clicked()
     connect(&ok,&QPushButton::clicked,[&]{
         auto ans=edit.toPlainText();
         if(ans.size()==0)return;
-        key_notes[the_key_showing][obj_index]=ans.trimmed();
-        if(ui->note_textEdit->find(old_str))
-        {
-            auto cursor=ui->note_textEdit->textCursor();
-            cursor.removeSelectedText();
-            cursor.insertText(ans);
-            ui->note_textEdit->setTextCursor(cursor);
-        }
-        else
-            ui->note_textEdit->append("\n\n******\n"+ans+"\n\n******");
+        //修改
+        the_Item_showing->set_piece_at(obj_index,ans.trimmed());
+
+        //刷新显示
+        show_key_content(the_Item_showing->getContent());
+        auto res=ui->note_textEdit->find("------"+QString::number(obj_index)+"------");
+        if(res)ui->note_textEdit->textCursor().clearSelection();
 
         is_modefied=1;
         dialog.close();
@@ -1375,9 +1304,9 @@ void MainWindow::on_node_edit_note_btn_clicked()
 
 void MainWindow::on_note_select_row_spinBox_valueChanged(int arg1)
 {
-    int max=key_notes[the_key_showing].size();
+    int max=the_Item_showing->count_piece()-1;
     if(arg1>=max)
-        ui->note_select_row_spinBox->setValue(max-1);
+        ui->note_select_row_spinBox->setValue(max);
 }
 
 void MainWindow::on_actionDelete_bank_row_triggered()
@@ -1564,6 +1493,7 @@ void MainWindow::on_actionAdd_volume_triggered()
             renew_dir();
         }
         is_modefied=1;
+        ui->statusBar->showMessage("添加卷："+edit_name.text());
     });
     connect(&spinbox_index,static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged),[&](int i){
         //确定插入位置chapter_index
@@ -1614,6 +1544,7 @@ void MainWindow::on_actionRm_volume_triggered()
                                    ,QMessageBox::Yes|QMessageBox::No);
     if(ans!=QMessageBox::Yes)return;
 
+    ui->statusBar->showMessage("删除卷："+book.volume_names[volume_index]);
     book.rm_volume(volume_index);
 //    renew_dir();
     auto v=ui->dir_treeWidget->takeTopLevelItem(volume_index);
@@ -1850,7 +1781,10 @@ void MainWindow::on_action_read_mode_triggered()
 //            qDebug()<<"customContextMenuRequested";
             QMenu menu;
             auto pre_chapter=menu.addAction("上一章");
+//            pre_chapter->setShortcut(Qt::LeftButton);
+            
             auto next_chapter=menu.addAction("下一章");
+//            pre_chapter->setShortcut(Qt::RightButton);
             menu.addSeparator();
             auto act_add_note=menu.addAction("添加笔记");
             menu.addSeparator();
@@ -1921,7 +1855,14 @@ void MainWindow::on_action_read_mode_triggered()
             menu.exec(QCursor::pos());
         });
 
+        hide();//打开阅读窗口后关闭主窗口
         dialog.exec();
+        //在非全屏模式下打开结束全屏模式前阅读的最后一章
+        auto cur_w=current_page();
+        if(book.find_chapter(cur_w)!=chapter_current)
+            open_chapter(chapter_current);
+
+        show();//重新显示主窗口
     }
     else
     {
@@ -2125,11 +2066,12 @@ void MainWindow::on_note_content_showing_font_size_valueChanged(int arg1)
     ui->note_textEdit->setTextCursor(cursor);
 }
 
-
-void MainWindow::on_note_key_listWidget_customContextMenuRequested(const QPoint &pos)
+//右键菜单显示
+void MainWindow::on_note_key_treeWidget_customContextMenuRequested(const QPoint &pos)
 {
     Q_UNUSED(pos);
-    if(!ui->note_key_listWidget->currentItem())
+    auto item=ui->note_key_treeWidget->currentItem();
+    if(!item)
     {
         QMessageBox::warning(Q_NULLPTR,"编辑项目","选择无效！");
         return;
@@ -2140,64 +2082,69 @@ void MainWindow::on_note_key_listWidget_customContextMenuRequested(const QPoint 
     auto rename=menu.addAction("重命名");
     auto remove=menu.addAction("删除该项");
 
-    auto item=ui->note_key_listWidget->currentItem();
+    bool is_key=1;
+    if(item->childCount())
+    {
+        rename->setEnabled(0);
+        open->setEnabled(0);
+        is_key=0;
+    }
+
     //从树状表中获取数据
-    QString note_key=item->data(Qt::DisplayRole).toString();
+    auto obj_node=item->data(0,Qt::UserRole).value<Note_Item*>();
+    if(!obj_node)return;
+    //更新当前笔记项
+    ui->show_nodes_dockWidget->hide();
+    the_Item_showing=obj_node;
+    //打开
     connect(open,&QAction::triggered,[&]{
-        show_key_content(note_key);
+        show_key_content(obj_node->getContent());
     });
+    //重命名
     connect(rename,&QAction::triggered,[&]{
-        auto ans=QInputDialog::getText(Q_NULLPTR,"对"+note_key+"重命名","命名为：",QLineEdit::Normal,note_key);
+        auto ans=QInputDialog::getText(Q_NULLPTR,"对"+obj_node->getKey_structure()+"重命名","命名为：",QLineEdit::Normal,obj_node->getKey_structure());
         ans=ans.trimmed();
-        if(ans.size()==0||ans==note_key)return;
-        if(key_notes.contains(ans))
-        {
-            QMessageBox::warning(Q_NULLPTR,"命名","名称已存在，命名无效！");
-            return;
-        }
-        for(int i=1;i<key_notes[note_key].size();i++)
-            add_note(ans,key_notes[note_key][i]);
-        key_notes.remove(note_key);
-        item->setText(ans);
+        if(ans.size()==0||ans==obj_node->getKey_structure())return;
+        note.rename(obj_node->getKey_structure(),ans,ui->note_key_treeWidget);
+        renew_completer({ans});
         is_modefied=1;
     });
+    //删除
     connect(remove,&QAction::triggered,[&]{
-        auto ans=QMessageBox::question(Q_NULLPTR,"删除","这将会删除整个索引以及所有相关笔记，确认码？\n"+note_key,
+        auto ans=QMessageBox::question(Q_NULLPTR,"删除","这将会删除整个索引以及所有相关笔记，确认码？\n"+obj_node->getKey_structure(),
                               QMessageBox::Yes|QMessageBox::No);
         if(ans!=QMessageBox::Yes)return ;
-        key_notes.remove(note_key);
-        delete ui->note_key_listWidget->takeItem(ui->note_key_listWidget->currentRow());
+        note.remove_one(*obj_node);
         is_modefied=1;
     });
     menu.exec(QCursor::pos());
 }
 
-
-void MainWindow::on_note_key_listWidget_itemDoubleClicked(QListWidgetItem *item)
-{
-    //从表中获取数据
-    QString note_key=item->data(Qt::DisplayRole).toString();
-    the_key_showing=note_key;
-    show_key_content(note_key);
-}
-
 void MainWindow::on_note_search_key_lineEdit_returnPressed()
 {
-    //先刷新列表再搜索
-    on_note_renew_key_list_btn_clicked();
     auto obj_key=ui->note_search_key_lineEdit->text();
     if(obj_key.size()==0)return;
-    for(int i=ui->note_key_listWidget->count()-1;i>=0;i--)
+
+    //先刷新列表再搜索
+    ui->note_key_listWidget->clear();
+    QStringList a;
+
+    for(auto i:note.getKey_structure())
     {
-        auto item=ui->note_key_listWidget->item(i);
-        if(item!=Q_NULLPTR)
-        {
-            if(item->text().contains(obj_key))
-                continue;
-            else
-                delete item;
-        }
+        if(i.contains(obj_key))
+            a.append(i);
     }
+    a.sort(Qt::CaseInsensitive);
+    for(auto i:a)
+    {
+        if(i.size()==0)continue;
+        auto item= new QListWidgetItem(i);
+        item->setData(Qt::UserRole,QVariant::fromValue(note.find_node(i)));
+        ui->note_key_listWidget->addItem(item);
+    }
+    //如果只有一个结果，直接打开
+    if(a.size()==1)
+        show_key_content(note.find_node(a.value(0))->getContent());
 }
 
 void MainWindow::on_action_read_write_mode_triggered()
@@ -2208,8 +2155,10 @@ void MainWindow::on_action_read_write_mode_triggered()
         label_rw_mode->setText(" Read-Mode ");
 //        label_rw_mode->setStyleSheet("background:rgb(220,180,180)");
     }
-    else
+    else//写作模式下，不能自动聚焦到添加笔记的key输入框
     {
+        ui->auto_focus_checkBox->setChecked(0);
+        ui->statusBar->showMessage("写作模式下，自动关闭自动聚焦");
         label_rw_mode->setText(" Write-Mode ");
 //        label_rw_mode->setStyleSheet("background:rgb(180,220,180)");
     }
@@ -2384,40 +2333,49 @@ void MainWindow::open_chapter_comment(Chapter *chapter_p)
         QMessageBox::warning(Q_NULLPTR,"错误","选择无效章节");
         return;
     }
-    QDialog *w=new QDialog;
-    w->setWindowFlags(Qt::CustomizeWindowHint|Qt::WindowTitleHint);
-    w->setWindowTitle("章节笔记@"+chapter_p->name);
-    w->resize(800,600);
+    QDockWidget *w=chapter_p->getDock_add_comment();
 
-    auto main_layout=new QVBoxLayout(w);
+    if(w!=Q_NULLPTR)
+    {
+        w->show();
+        return ;
+    }
+    else
+        w=new QDockWidget("章节笔记@"+chapter_p->name,this);
+    w->setAllowedAreas(Qt::AllDockWidgetAreas);
+    addDockWidget(Qt::RightDockWidgetArea,w);
+    w->resize(1000,800);
+
+    QWidget *group_widget=new QWidget(w);
+    w->setWidget(group_widget);
+    auto main_layout=new QVBoxLayout(group_widget);
     main_layout->setMargin(0);
-    QPushButton *ok=new QPushButton("确认",w);
-    QPushButton *cancel=new QPushButton("取消",w);
-
     auto edit=new QTextEdit(w);
     edit->setFontPointSize(16);
-    main_layout->addWidget(edit);
     edit->setFocus();
+    edit->setText(chapter_p->comment);
+//    edit->textCursor().movePosition()
+    main_layout->addWidget(edit);
 
     auto btn_layout=new QHBoxLayout;
     btn_layout->setMargin(2);
     main_layout->addLayout(btn_layout);
+
+    QPushButton *ok=new QPushButton("确认",w);
+    QPushButton *cancel=new QPushButton("取消",w);
     btn_layout->addWidget(ok);
     btn_layout->addWidget(cancel);
-    edit->setText(chapter_p->comment);
 
-    w->deleteLater();
-    w->setWindowModality(Qt::WindowModal);
     connect(ok,&QPushButton::clicked,[chapter_p,edit,w]{
         chapter_p->comment=edit->toPlainText();
         w->close();
+        w->deleteLater();
     });
     connect(cancel,&QPushButton::clicked,[w]{
         w->close();
+        w->deleteLater();
     });
-    connect(w,&QTextEdit::destroyed,[]{qDebug()<<"dialog is distoryed.";});
     connect(btn_layout,&QHBoxLayout::destroyed,[]{qDebug()<<"btn_layout is distoryed.";});
-    w->exec();
 }
 
 void MainWindow::open_chapter_imitating(Chapter*chapter_p)
@@ -2429,7 +2387,7 @@ void MainWindow::open_chapter_imitating(Chapter*chapter_p)
     }
     QDockWidget *w=chapter_p->getAdd_imitating();
 
-    if(chapter_p->getAdd_imitating()!=Q_NULLPTR)
+    if(w!=Q_NULLPTR)
     {
         w->show();
         return ;
@@ -2473,13 +2431,17 @@ void MainWindow::open_chapter_imitating(Chapter*chapter_p)
 }
 void MainWindow::on_action_add_comment_triggered()
 {
-    auto chapter_p=ui->dir_treeWidget->currentItem()->data(0,Qt::UserRole).value<Chapter*>();
+    auto item=ui->dir_treeWidget->currentItem();
+    if(item==Q_NULLPTR)return;
+    auto chapter_p=item->data(0,Qt::UserRole).value<Chapter*>();
     open_chapter_comment(chapter_p);
 }
 
 void MainWindow::on_actionadd_imitating_triggered()
 {
-    auto chapter_p=ui->dir_treeWidget->currentItem()->data(0,Qt::UserRole).value<Chapter*>();
+    auto item=ui->dir_treeWidget->currentItem();
+    if(item==Q_NULLPTR)return;
+    auto chapter_p=item->data(0,Qt::UserRole).value<Chapter*>();
     open_chapter_imitating(chapter_p);
 }
 
@@ -2580,4 +2542,138 @@ void MainWindow::on_tabWidget_tabBarDoubleClicked(int index)
     menu.addAction(ui->actionadd_imitating);
 
     menu.exec(QCursor::pos());
+}
+
+void MainWindow::on_note_key_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column)
+{
+    Q_UNUSED(column);
+    //从表中获取数据
+    the_Item_showing=item->data(0,Qt::UserRole).value<Note_Item*>();
+    if(the_Item_showing)
+        show_key_content(the_Item_showing->getContent());
+}
+
+void MainWindow::on_note_key_listWidget_itemDoubleClicked(QListWidgetItem *item)
+{
+    //从表中获取数据
+    the_Item_showing=item->data(Qt::UserRole).value<Note_Item*>();
+    if(the_Item_showing)
+        show_key_content(the_Item_showing->getContent());
+}
+
+void MainWindow::on_note_key_listWidget_customContextMenuRequested(const QPoint &pos)
+{
+    //检验
+    Q_UNUSED(pos);
+    auto item=ui->note_key_listWidget->currentItem();
+    if(!item)
+    {
+        QMessageBox::warning(Q_NULLPTR,"编辑项目","选择无效！");
+        return;
+    }
+
+    QMenu menu;
+    auto open=menu.addAction("打开");
+    auto rename=menu.addAction("重命名");
+    auto remove=menu.addAction("删除该项");
+
+    //从树状表中获取数据
+    auto obj_node=item->data(Qt::UserRole).value<Note_Item*>();
+    if(!obj_node)return;
+    //更新当前笔记项
+    ui->show_nodes_dockWidget->hide();
+    the_Item_showing=obj_node;
+    //打开
+    connect(open,&QAction::triggered,[&]{
+        show_key_content(obj_node->getContent());
+    });
+    //重命名
+    connect(rename,&QAction::triggered,[&]{
+        //获取新名
+        auto ans=QInputDialog::getText(Q_NULLPTR,"对"+obj_node->getKey_structure()+"重命名","命名为：",QLineEdit::Normal,obj_node->getKey_structure());
+        ans=ans.trimmed();
+        if(ans.size()==0||ans==obj_node->getKey_structure())return;
+
+        note.rename(obj_node->getKey_structure(),ans,ui->note_key_treeWidget);
+        item->setText(ans);
+        renew_completer({ans});
+        is_modefied=1;
+    });
+    //删除
+    connect(remove,&QAction::triggered,[&]{
+        auto ans=QMessageBox::question(Q_NULLPTR,"删除","这将会删除整个索引以及所有相关笔记，确认码？\n"+obj_node->getKey_structure(),
+                              QMessageBox::Yes|QMessageBox::No);
+        if(ans!=QMessageBox::Yes)return ;
+        note.remove_one(*obj_node);
+        delete item;
+        is_modefied=1;
+    });
+    menu.exec(QCursor::pos());
+}
+
+
+void MainWindow::on_note_key_treeWidget_itemClicked(QTreeWidgetItem *item, int column)
+{
+    Q_UNUSED(column);
+    auto node=item->data(0,Qt::UserRole).value<Note_Item*>();
+    if(!node)return;
+    ui->note_key_LineEdit->setText(node->getKey_structure());
+    ui->note_key_LineEdit->setFocus();
+}
+
+void MainWindow::on_action_next_chapter_triggered()
+{
+    //获取窗口
+    auto current_tab=current_page();
+    if(current_tab==Q_NULLPTR)return;
+
+    //获取之前显示的一章
+    auto last_chapter=book.find_chapter(current_tab);
+    if(last_chapter==Q_NULLPTR)return;
+    //关闭
+    else on_tabWidget_tabCloseRequested(ui->tabWidget->currentIndex());
+
+    Chapter* next_chapter=Q_NULLPTR;
+    int c=last_chapter->chapter_index;
+    int v=last_chapter->vol_index;
+    if(c==book.data[v].size()-1)
+    {
+        v++;
+        if(v>=book.data.size()||!book.data[v].size())return;//遇到空卷
+        next_chapter=&book.data[v][0];
+    }
+    else
+    {
+        next_chapter=&book.data[v][c+1];
+    }
+    //打开
+    if(next_chapter)open_chapter(next_chapter);
+}
+
+void MainWindow::on_action_pre_chapter_triggered()
+{
+    //获取窗口
+    auto current_tab=current_page();
+    if(current_tab==Q_NULLPTR)return;
+
+    //获取之前显示的一章
+    auto last_chapter=book.find_chapter(current_tab);
+    if(last_chapter==Q_NULLPTR)return;
+    //关闭
+    else on_tabWidget_tabCloseRequested(ui->tabWidget->currentIndex());
+
+    Chapter* next_chapter=Q_NULLPTR;
+    int c=last_chapter->chapter_index;
+    int v=last_chapter->vol_index;
+    if(c==0)
+    {
+        v--;
+        if(v<0||!book.data[v].size())return;//遇到空卷
+        next_chapter=&book.data[v].back();
+    }
+    else
+    {
+        next_chapter=&book.data[v][c-1];
+    }
+    if(next_chapter)open_chapter(next_chapter);
 }

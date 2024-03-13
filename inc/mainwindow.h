@@ -30,7 +30,7 @@
 #include<QFileSystemModel>
 #include <QTreeWidgetItem>
 #include <QStringListModel>
-
+#include"inc/note.h"
 #define APP_NAME QString("读写助手")
 #define COUNT_WORD_MSG(num) (QString("本章字数：%1").arg(num))
 
@@ -68,8 +68,9 @@ private:
     QString background_color_sheet;         //背景颜色
     QTextCharFormat fmt;                    //字体格式
     int search_option;                      //0:对当前章节正文，1：对全书章节名，2：对全书正文
-    QHash<QString,QStringList> key_notes;   //每个QStringList为一个key本身和与key对应的笔记的集合
-    QString the_key_showing;                //当前右侧窗口显示的笔记所属的key
+
+    Note note;
+    Note_Item *the_Item_showing;                //当前右侧窗口显示的笔记所属的key
     bool R_W_mode;                          //读写模式
     int text_margin;                        //文本编辑框内的文本边距
     int line_height;                          //文本编辑框内的文本行距
@@ -93,6 +94,8 @@ private:
     void renew_viewport_format(const QString &font_family);
     //刷新主窗口标题
     void renew_window_title();
+    //
+    void renew_completer(QStringList list);
     //读写配置信息
     void writeSettings();
     void readSettings();
@@ -128,6 +131,12 @@ private slots:
     void on_actionRemove_Chapter_triggered();   //删除章节
 
     void on_actionExport_triggered();           //导出pdf
+
+    //选项
+    void on_action_read_write_mode_triggered();     //读写模式调整
+    void on_action_Margin_triggered();              //编辑页面边距
+    void on_action_line_high_triggered();           //行高
+//    void on_action_letter_space_triggered();      //字距
     //关于
     void on_actionAuthor_triggered();       //关于作者
     void on_actionQt_triggered();           //关于Qt
@@ -141,10 +150,9 @@ private slots:
     void on_action_read_mode_triggered();               //全屏阅读
 
     //edit_Tab
-    void on_tabWidget_tabCloseRequested(int index);
-    void on_tabWidget_currentChanged(int index);
-    //双击tab名，弹出菜单以打开comment或仿写
-    void on_tabWidget_tabBarDoubleClicked(int index);
+    void on_tabWidget_tabCloseRequested(int index);     //关闭请求
+    void on_tabWidget_currentChanged(int index);        //当前页面改变
+    void on_tabWidget_tabBarDoubleClicked(int index);   //双击tab名，弹出菜单以打开comment或仿写
 
     //书架
     void on_file_browse_listWidget_itemDoubleClicked(QListWidgetItem *item);
@@ -155,6 +163,14 @@ private slots:
     void on_dir_treeWidget_itemClicked(QTreeWidgetItem *item, int column);
     void on_dir_treeWidget_customContextMenuRequested(const QPoint &pos);
     void on_action_edit_chapter_triggered();
+    void on_dir_tabWidget_tabBarClicked(int index);
+
+    void on_action_add_comment_triggered();             //添加章节笔记
+    void on_actionadd_imitating_triggered();            //添加章节仿写
+    void on_actionget_chapter_notes_triggered();
+    void on_actionget_chapter_imitating_triggered();
+    void on_chapter_note_listWidget_itemDoubleClicked(QListWidgetItem *item);           //笔记搜索结果双击
+    void on_chapter_imitating_listWidget_itemDoubleClicked(QListWidgetItem *item);      //仿写记录搜索结果双击
     //搜索
     void on_search_option_comboBox_currentTextChanged(const QString &arg1);
     void on_find_all_btn_clicked();
@@ -163,34 +179,32 @@ private slots:
     void on_replace_current_btn_clicked();
     void on_replace_all_btn_clicked();
     //摘录
-    void export_note_to_list_file();
-    void pop_up_to_add_note(QString the_content_to_add_note);
+    //添加
     void add_note(QString key,QString content);
-    void show_key_content(QString key);
+    void pop_up_to_add_note(QString the_content_to_add_note);
     void on_auto_focus_checkBox_stateChanged(int arg1);//自动聚焦到key编辑框
     void on_note_key_LineEdit_returnPressed();
     void on_note_save_btn_clicked();
-    void on_note_renew_key_list_btn_clicked();
+    void on_note_content_LineEdit_returnPressed();
+    //    void on_note_renew_key_list_btn_clicked();
+    //显示
+    void show_key_content(const QStringList &key);
     void on_node_rm_row_btn_clicked();
     void on_node_edit_note_btn_clicked();
     void on_note_select_row_spinBox_valueChanged(int arg1);
-    void on_note_content_LineEdit_returnPressed();
-    void on_note_content_search_returnPressed();
     void on_note_content_showing_font_size_valueChanged(int arg1);
-    void on_note_key_listWidget_customContextMenuRequested(const QPoint &pos);
-    void on_note_key_listWidget_itemDoubleClicked(QListWidgetItem *item);
+    //搜索
+    void on_note_content_search_returnPressed();
     void on_note_search_key_lineEdit_returnPressed();
-    void on_action_read_write_mode_triggered();
-    void on_action_Margin_triggered();
-    void on_action_line_high_triggered();
-//    void on_action_letter_space_triggered();
-    void on_dir_tabWidget_tabBarClicked(int index);
-    void on_action_add_comment_triggered();
-    void on_actionadd_imitating_triggered();
-    void on_chapter_note_listWidget_itemDoubleClicked(QListWidgetItem *item);
-    void on_chapter_imitating_listWidget_itemDoubleClicked(QListWidgetItem *item);
-    void on_actionget_chapter_notes_triggered();
-    void on_actionget_chapter_imitating_triggered();
-    void on_note_key_listWidget_itemClicked(QListWidgetItem *item);
+    //编辑
+    void on_note_key_treeWidget_customContextMenuRequested(const QPoint &pos);          //树状图右键菜单
+    void on_note_key_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column);   //树状图双击
+
+    void on_note_key_listWidget_itemClicked(QListWidgetItem *item);                     //搜索结果单击
+    void on_note_key_listWidget_itemDoubleClicked(QListWidgetItem *item);               //搜索结果双击
+    void on_note_key_listWidget_customContextMenuRequested(const QPoint &pos);          //搜索结果右键菜单
+    void on_note_key_treeWidget_itemClicked(QTreeWidgetItem *item, int column);
+    void on_action_next_chapter_triggered();
+    void on_action_pre_chapter_triggered();
 };
 #endif // MAINWINDOW_H

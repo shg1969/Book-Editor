@@ -1,127 +1,232 @@
-#include "inc/note.h"
+#include "../inc/note.h"
 
-Note_Tree::Note_Tree(QWidget *parent):QTreeWidget(parent)
-{
-    setAcceptDrops(true);                      // 设置窗口部件可以接收拖入
-    setHeaderHidden(1);
-    setItemsExpandable(1);
-    setExpandsOnDoubleClick(1);
-    setAutoExpandDelay(100);
-
-    QTreeWidgetItem *a=new QTreeWidgetItem({"a"});
-    QTreeWidgetItem *b=new QTreeWidgetItem({"b"});
-    QTreeWidgetItem *c=new QTreeWidgetItem({"c"});
-    QTreeWidgetItem *d=new QTreeWidgetItem({"d"});
-    QTreeWidgetItem *e=new QTreeWidgetItem({"e"});
-    a->addChild(new QTreeWidgetItem({"1"}));
-    a->addChild(new QTreeWidgetItem({"2"}));
-    a->addChild(new QTreeWidgetItem({"3"}));
-    e->addChild(new QTreeWidgetItem({"4"}));
-    e->addChild(new QTreeWidgetItem({"5"}));
-
-    addTopLevelItem(a);
-    addTopLevelItem(b);
-    addTopLevelItem(c);
-    addTopLevelItem(d);
-    addTopLevelItem(e);
-}
-
-Note_Tree::~Note_Tree()
+Note::Note()
 {
 
 }
 
-//void Note_Tree::mousePressEvent(QMouseEvent *event)   //鼠标按下事件
-//{
-//    // 第一步：获取Note
-//    // 将鼠标指针所在位置的部件强制转换为QTreeWidgetItem类型
-//    QTreeWidgetItem *item = itemAt(event->pos());
-//    if(item==Q_NULLPTR) return; // 如果部件不是QTreeWidgetItem则直接返回
-//    QString key=item->text(0);
-
-//    // 第二步：自定义MIME类型
-//    QByteArray itemData;                                     // 创建字节数组
-//    QDataStream dataStream(&itemData, QIODevice::WriteOnly); // 创建数据流
-//    // 将key，位置信息输入到字节数组中
-//    dataStream << key;
-
-//    // 第三步：将数据放入QMimeData中
-//    QMimeData *mimeData = new QMimeData;  // 创建QMimeData用来存放要移动的数据
-//    // 将字节数组放入QMimeData中，这里的MIME类型是我们自己定义的
-//    mimeData->setData("myimage/png", itemData);
-
-//    // 第四步：将QMimeData数据放入QDrag中
-//    QDrag *drag = new QDrag(this);      // 创建QDrag，它用来移动数据
-//    drag->setMimeData(mimeData);
-//    drag->setPixmap(QPixmap());//在移动过程中显示图片，若不设置则默认显示一个小矩形
-////    drag->setHotSpot(event->pos() - item->pos()); // 拖动时鼠标指针的位置不变
-
-////    // 第五步：给原笔记节点添加标记
-////    item->setBackground(0,Qt::gray);
-
-//    // 第六步：执行拖放操作
-//    if (drag->exec(Qt::MoveAction)
-//            == Qt::MoveAction)  // 设置拖放可以是移动和复制操作，默认是复制操作
-//        delete item;        // 如果是移动操作，那么拖放完成后关闭原标签
-//}
-
-//void Note_Tree::dragEnterEvent(QDragEnterEvent *event) // 拖动进入事件
-//{
-//      // 如果有我们定义的MIME类型数据，则进行移动操作
-//     if (event->mimeData()->hasText()) {
-//             event->setDropAction(Qt::MoveAction);
-//             event->accept();
-//     } else {
-//         event->ignore();
-//     }
-//}
-//void Note_Tree::dragMoveEvent(QDragMoveEvent *event)   // 拖动事件
-//{
-//     if (event->mimeData()->hasText()) {
-//             event->setDropAction(Qt::MoveAction);
-//             event->accept();
-//     } else {
-//         event->ignore();
-//     }
-//}
-
-//void Note_Tree::dropEvent(QDropEvent *event) // 放下事件
-//{
-//    if (event->mimeData()->hasText()) {
-//         QByteArray itemData = event->mimeData()->data("text/plain");
-//         QDataStream dataStream(&itemData, QIODevice::ReadOnly);
-//         QString key;
-//         // 使用数据流将字节数组中的数据读入到key中
-//         dataStream >> key;
-//         // 新建项
-//         // 将鼠标指针所在位置的部件强制转换为QTreeWidgetItem类型
-//         QTreeWidgetItem *item = itemAt(event->pos());
-//         if(item==Q_NULLPTR) return; // 如果部件不是QTreeWidgetItem则直接返回
-//         item->addChild(new QTreeWidgetItem({key}));
-//         event->setDropAction(Qt::MoveAction);
-//         event->accept();
-//     } else {
-//         event->ignore();
-//     }
-//}
-
-
-Notes::Notes(QWidget *parent) : QWidget(parent)
+bool Note::read(QString file_dir,QTreeWidget*tree)
 {
-    this->setWindowFlag(Qt::FramelessWindowHint);
+    //打开文件，获取数据流
+    if(file_dir.size()==0)return 0;
+    bool res=0;
+    QFile f(file_dir);
+    if(!f.open(QIODevice::ReadOnly))
+        return 0;
+    QDataStream In(&f);
+    //判断版本
+    QString test;
+    In>>test;
+    if(test!=NOTE_VERSION_0)
+    {
+        In.device()->reset();
+    }
+    else
+        version=0;
 
-    QVBoxLayout *main_layout=new QVBoxLayout(this);
-    main_layout->setMargin(0);
+    //按版本读取
+    QString lever_key;
+    QStringList content_list;
+    switch (version)
+    {
+    case 0:
+        while(!f.atEnd())
+        {
+            In>>lever_key;
+            In>>content_list;
+            content_list.sort();
+            for(int index=0;index<content_list.size();index++)
+                res=this->add(lever_key,content_list[index],tree);
+            content_list.clear();
+        }
+        break;
+    default:
+        while(!f.atEnd())
+        {
+            In>>content_list;
+            content_list.sort();
+            if(content_list.count())
+                for(int index=1;index<content_list.size();index++)
+                    res=this->add(content_list[0],content_list[index],tree);
+            content_list.clear();
+        }
 
-    toolbar=new QToolBar(this);
-    toolbar->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    }
 
-    key_view=new QTreeWidget(this);
-    key_view->setHeaderHidden(1);
-
-    main_layout->addWidget(toolbar);
-    main_layout->addWidget(key_view);
-
-    auto act=toolbar->addAction("123");
+    f.close();
+    return res;
 }
 
+void Note::save(QString file_dir)
+{
+    if(file_dir.size()==0)return;
+    QFile f(file_dir);
+    if(!f.open(QIODevice::WriteOnly))
+    {
+        QMessageBox::warning(Q_NULLPTR,"打开文件","打开word list文件失败！");
+        return;
+    }
+    QDataStream Out(&f);
+    Out<<NOTE_VERSION_0;
+
+    for(auto &i:data)
+    {
+        Out<<i.getKey_structure();
+        Out<<i.getContent();
+    }
+    f.close();
+}
+
+Note_Item* Note::add(const QString &lever_key, const QString &content,QTreeWidget*tree)
+{
+    if(lever_key.size()==0||content.size()==0||tree==Q_NULLPTR)return Q_NULLPTR;
+
+    auto list=lever_key.split('-', QString::SkipEmptyParts);
+    if(list.size()==0)return Q_NULLPTR;
+
+    //若不存在，添加项目窗体
+    if(!key_structure.contains(lever_key))
+    {
+        //确定顶层项目
+        QTreeWidgetItem*root_item=Q_NULLPTR;
+        for(int j=0;j<tree->topLevelItemCount();j++)
+            if(tree->topLevelItem(j)->text(0)==list[0])
+            {
+                root_item=tree->topLevelItem(j);
+                break;
+            }
+        if(root_item==Q_NULLPTR)
+        {
+            root_item=new QTreeWidgetItem({list[0]});
+            tree->addTopLevelItem(root_item);
+            tree->scrollToItem(root_item);
+        }
+        //确定次级到末尾
+        QTreeWidgetItem* temp_item=root_item;
+        bool is_exist=0;
+        for(int i=1;i<list.size();i++)
+        {
+            is_exist=0;
+            qDebug()<<list[i];
+            //已存在该层级
+            for(int j=0;j<temp_item->childCount();j++)
+            {
+                qDebug()<<temp_item->child(j)->text(0);
+                if(temp_item->child(j)->text(0)==list[i])
+                {
+                    temp_item=temp_item->child(j);
+//                    tree->expandItem(temp_item);
+                    is_exist=1;
+                    break;
+                }
+            }
+            if(is_exist)continue;
+            auto child=new QTreeWidgetItem({list[i]});
+//            tree->expandItem(temp_item);
+            temp_item->addChild(child);
+            temp_item=child;
+            tree->scrollToItem(temp_item);
+        }
+        key_structure.push_back(lever_key);
+        key_structure.sort();
+        //添加笔记
+        Note_Item new_node(temp_item,lever_key,{content});
+        data.append(new_node);
+        temp_item->setData(0,Qt::UserRole,QVariant::fromValue(&data.back()));
+        return &data.back();
+    }
+    //若存在，添加到数据库
+    for(auto &node:data)
+    {
+        //若已经存在该key
+        if(lever_key==node.getKey_structure())
+        {
+            node.append(content);
+            return &node;
+        }
+    }
+    return Q_NULLPTR;
+}
+
+Note_Item *Note::node_at(int i)
+{
+    if(i<0||i>data.size()-1)return Q_NULLPTR;
+    return &data[i];
+}
+
+Note_Item *Note::find_node(const QString &lever_key)
+{
+    for(auto &i:data)
+    {
+        if(i.getKey_structure()==lever_key)
+            return &i;
+    }
+    return Q_NULLPTR;
+}
+
+void Note::rename(QString old_key, QString new_key,QTreeWidget*tree)
+{
+    if(!key_structure.contains(old_key))return;
+    if(key_structure.contains(new_key))
+    {
+        auto res=QMessageBox::question(Q_NULLPTR,"警告",new_key+"已存在，要将"+old_key+"中的元素转移到"+new_key+"中吗？");
+        if(res!=QMessageBox::Yes)
+            return;
+    }
+
+    auto obj=find_node(old_key);
+    if(!obj)return;
+    for(int i=0;i<obj->count_piece();i++)
+    {
+        add(new_key,obj->getContent()[i],tree);
+    }
+    //窗体上的删除
+    delete obj->getWidget_item();
+    //数据上的删除
+    key_structure.removeOne(old_key);
+    data.removeOne(*obj);
+    return;
+}
+
+
+QStringList Note::getKey_structure() const
+{
+    return key_structure;
+}
+
+Note_Item::Note_Item(QTreeWidgetItem*item,const QString &Key_structure, QStringList Content)
+{
+    widget_item=item;
+    key_structure=Key_structure;
+    content=Content;
+}
+
+QString Note_Item::getKey_structure() const
+{
+    return key_structure;
+}
+
+void Note_Item::setKey_structure(const QString &value)
+{
+    key_structure = value;
+}
+
+QStringList Note_Item::getContent() const
+{
+    return content;
+}
+
+void Note_Item::setContent(const QStringList &value)
+{
+    content = value;
+}
+
+QTreeWidgetItem *Note_Item::getWidget_item() const
+{
+    return widget_item;
+}
+
+void Note_Item::append(const QString &piece)
+{
+    content<<piece;
+}

@@ -51,7 +51,7 @@ public:
     void write(QDataStream &Out);
 
     void close(bool save,QTabWidget *container);
-    void open(TextEdit*p);
+    void open(TextEdit*p, int line_height=40);
     TextEdit*get_tab_pointer(void);
 
 
@@ -65,9 +65,12 @@ public:
     QString imitating;  //仿写
     QDockWidget *getAdd_imitating() const;
 
+    QDockWidget *getDock_add_comment() const;
+
 private:
     TextEdit *edit_tab;
-    QDockWidget* add_imitating;
+    QDockWidget* dock_add_imitating=0;
+    QDockWidget* dock_add_comment=0;
 };
 
 //为QVariant登记自定义类型

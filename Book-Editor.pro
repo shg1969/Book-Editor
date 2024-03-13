@@ -19,11 +19,13 @@ SOURCES += \
     src/book.cpp \
     src/main.cpp \
     src/mainwindow.cpp \
+    src/note.cpp \
     src/textedit.cpp
 
 HEADERS += \
     inc/book.h \
     inc/mainwindow.h \
+    inc/note.h \
     inc/textedit.h
 
 # Default rules for deployment.
