@@ -23,6 +23,7 @@
 #include<QDataStream>
 #include"textedit.h"
 #include<QTabWidget>
+#include<QTextCursor>
 #include<QDockWidget>
 
 //软件数据的存放顶层路径
@@ -34,6 +35,7 @@
 //书籍版本
 #define BOOK_VERSION_0 (QString("0_***version_&&&***"))
 #define BOOK_VERSION_1 (QString("1_***version_&&&***"))
+#define BOOK_VERSION_2 (QString("2_***version_&&&***"))
 
 //保存章节内对key的搜索结果的数据结构，每一条QPair为一项，其中包含搜索结果的上下文QString，和该结果在本章内出现的次序
 typedef QVector<QPair<QString,int>> Search_Result;
@@ -55,7 +57,7 @@ public:
     TextEdit*get_tab_pointer(void);
 
 
-    bool operator==(const Chapter c);
+    bool operator==(const Chapter mark_cursor);
     int vol_index;      //卷标
     int chapter_index;  //章序
     QString name;       //章节名
@@ -71,6 +73,7 @@ private:
     TextEdit *edit_tab;
     QDockWidget* dock_add_imitating=0;
     QDockWidget* dock_add_comment=0;
+//    int mark_cursor_pos=0;      //用作书签
 };
 
 //为QVariant登记自定义类型

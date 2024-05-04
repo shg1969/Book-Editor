@@ -7,10 +7,12 @@
 #include<QList>
 #include<QFile>
 #include<QDataStream>
+#include<QTextStream>
 #include<QMessageBox>
 #include<QTreeWidget>
 #include<QDebug>
 #include<QTreeWidgetItem>
+#include<QDateTime>
 
 //笔记版本
 #define NOTE_VERSION_0 (QString("0_***version_&&&***"))
@@ -24,6 +26,7 @@ public:
 
 
 public:
+    //比较
     bool operator==(const Note_Item& obj)
     {
         if(this->key_structure==obj.key_structure
@@ -61,6 +64,9 @@ public:
         return key_structure.split('-').back();
     }
 
+
+    QString getContent_TXT() const;
+
 private:
     QString key_structure;          //层级名：层1-层2-...层n-key
     QStringList content;            //内容
@@ -76,6 +82,7 @@ public:
 
     bool read(QString file_dir,QTreeWidget*tree);
     void save(QString file_dir);
+    void save_as_txt(QString file_dir);
 
     Note_Item* add(const QString &lever_key,const QString &content,QTreeWidget*tree);
     Note_Item* node_at(int i);

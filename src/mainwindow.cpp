@@ -1375,6 +1375,7 @@ void MainWindow::on_dir_treeWidget_customContextMenuRequested(const QPoint &pos)
     menu.addAction(ui->actionRemove_Blank_Chapter);
     menu.addAction(ui->actionAuto_subchapter);
     menu.addAction(ui->action_edit_chapter);
+    auto act_delete_vol=menu.addAction("删除卷");
 
     //重命名
     connect(act_modify,&QAction::triggered,[&]{
@@ -1414,6 +1415,61 @@ void MainWindow::on_dir_treeWidget_customContextMenuRequested(const QPoint &pos)
         menu.close();
     });
 
+    //删除卷
+    connect(act_delete_vol,&QAction::triggered,[&]{
+        QTreeWidgetItem*vol_item=Q_NULLPTR;
+        if(!ui->dir_treeWidget->currentItem())
+        {
+            QMessageBox::warning(Q_NULLPTR,"删除章节","选择无效！");
+            return;
+        }
+        auto chapter_p=ui->dir_treeWidget->currentItem()->data(0,Qt::UserRole).value<Chapter*>();
+        if(chapter_p==Q_NULLPTR)    //此为卷名
+            vol_item=ui->dir_treeWidget->currentItem();
+        else                        //此为章
+        {
+            vol_item=ui->dir_treeWidget->currentItem()->parent();
+        }
+
+        QMessageBox que(Q_NULLPTR);
+        que.setWindowTitle("删除卷");
+        que.setText("确定要删除以下卷吗？\n"+vol_item->text(0)+
+                    "\n其中共包含"+QString::number(vol_item->childCount())+"章\n");
+        que.addButton("删除卷",QMessageBox::ApplyRole);
+        que.addButton("删除卷及其章节",QMessageBox::YesRole);
+        que.addButton("取消",QMessageBox::RejectRole);
+        auto ans=que.exec();
+        switch (ans) {
+        case QMessageBox::ApplyRole:
+        {
+            auto pre=ui->dir_treeWidget->itemAbove(vol_item);
+            if(pre)
+            {
+                for(int i=0;i<vol_item->columnCount();i++)
+                    pre->addChild(vol_item->takeChild(i));
+                delete vol_item;
+                return;
+            }
+            else
+                pre=ui->dir_treeWidget->itemBelow(vol_item);
+            if(pre)
+            {
+                for(int i=vol_item->columnCount()-1;i>=0;i--)
+                    pre->insertChild(0,vol_item->takeChild(i));
+                delete vol_item;
+                return;
+            }
+            for(int i=vol_item->columnCount()-1;i>=0;i--)
+                ui->dir_treeWidget->insertTopLevelItem(ui->dir_treeWidget->indexOfTopLevelItem(vol_item),vol_item->takeChild(i));
+            delete vol_item;
+            break;
+        }
+        case QMessageBox::YesRole:
+            delete vol_item;break;
+        default:
+            que.close();
+        }
+    });
     menu.exec(QCursor::pos());
 }
 
@@ -1747,6 +1803,7 @@ void MainWindow::on_action_read_mode_triggered()
     if(w!=Q_NULLPTR)
     {
         QDialog dialog(Q_NULLPTR,Qt::FramelessWindowHint);
+        dialog.showMaximized();
         dialog.setModal(Qt::ApplicationModal);
 
         QVBoxLayout layout;
@@ -1754,24 +1811,25 @@ void MainWindow::on_action_read_mode_triggered()
         layout.setMargin(0);
 
         TextEdit reader(1,&dialog);
-
+        reader.setReadOnly(R_W_mode);
+        layout.addWidget(&reader);
         reader.setContextMenuPolicy(Qt::CustomContextMenu);
         reader.setText(w->toPlainText(),line_height);
 
-        reader.document()->setDocumentMargin(text_margin);
-        reader.setReadOnly(R_W_mode);
-
-        reader.setCurrentCharFormat(fmt);
-        reader.setStyleSheet(background_color_sheet);
+        //设置显示格式
+        reader.document()->setDocumentMargin(text_margin);  //边距
+        reader.setCurrentCharFormat(fmt);                   //字体格式
+        reader.setStyleSheet(background_color_sheet);       //背景样式
 
         auto cursor=reader.textCursor();
         cursor.select(QTextCursor::Document);
         cursor.setCharFormat(fmt);
         cursor.clearSelection();
 
-        layout.addWidget(&reader);
-
-        dialog.showMaximized();
+//        //设置阅读位置
+//        int pos=w->cursorForPosition({w->viewport()->width(),w->viewport()->height()}).position();
+//        cursor.setPosition(pos);
+//        reader.setTextCursor(cursor);
 
         auto chapter_current=book.find_chapter(current_page());
         if(chapter_current==Q_NULLPTR)return;
@@ -2676,4 +2734,120 @@ void MainWindow::on_action_pre_chapter_triggered()
         next_chapter=&book.data[v][c-1];
     }
     if(next_chapter)open_chapter(next_chapter);
+}
+
+void MainWindow::on_actionExport_notes_triggered()
+{
+    auto file_name=QFileDialog::getSaveFileName(Q_NULLPTR,"将摘抄笔记导出到TXT文件","./untitled_notes.txt","文本文件(*.txt)");
+    if(file_name.size()==0)return;
+    if(file_name.right(4)!=".txt")
+    {
+        file_name+=".txt";
+    }
+    note.save_as_txt(file_name);
+}
+
+void MainWindow::on_actionAppend_notes_from_ClipBoard_triggered()
+{
+    QDialog *preview_window=new QDialog;
+    preview_window->setWindowTitle("预览");
+
+    QLabel *key_label=new QLabel("索引",this);
+    QTextEdit *edit=new QTextEdit(this);
+    QPushButton *ok=new QPushButton(this),*cancel=new QPushButton(this),*Refresh=new QPushButton(this);
+    QListWidget* list_widget=new QListWidget(this);
+
+    QVBoxLayout *total=new QVBoxLayout(preview_window),*layout_key=new QVBoxLayout();
+    QHBoxLayout *layout_key_and_content=new QHBoxLayout(),*layout_btns=new QHBoxLayout();
+    //布局
+    total->setMargin(0);
+    layout_key->setMargin(1);
+    layout_key_and_content->setMargin(1);
+    layout_btns->setMargin(1);
+
+    layout_key_and_content->addLayout(layout_key);
+    total->addLayout(layout_key_and_content);
+    total->addLayout(layout_btns);
+
+    //窗体
+    layout_key->addWidget(key_label);
+    layout_key->addWidget(list_widget);
+    layout_key_and_content->addWidget(edit);
+    edit->setPlainText("双击左侧索引以查看详细内容");
+
+    layout_btns->addWidget(Refresh);
+    layout_btns->addWidget(cancel);
+    layout_btns->addWidget(ok);
+
+    ok->setFocus();
+    ok->setText("确认");
+    cancel->setText("取消");
+    Refresh->setText("刷新");
+    //添加摘抄笔记索引
+    auto text=QGuiApplication::clipboard()->text();
+    text=text.trimmed();
+
+    auto item_list=text.split('#');
+    if(text[0]!='#')
+        item_list.removeAt(0);
+
+    for(auto item:item_list)
+    {
+        auto contents=item.split('\n',QString::SkipEmptyParts);
+        if(contents.size()<2)continue;
+
+        QListWidgetItem *tree_item=new QListWidgetItem({contents[0]});
+        tree_item->setData(Qt::UserRole,QVariant::fromValue(contents));
+        list_widget->addItem(tree_item);
+    }
+    //信号与槽
+    connect(list_widget,&QListWidget::itemDoubleClicked,[&edit](QListWidgetItem *item){
+        QStringList content=item->data(Qt::UserRole).value<QStringList>();
+        edit->clear();
+
+        for(int count=1;count<content.size();count++)
+        {
+            edit->append(QString::number(count)+". "+content[count].trimmed()+'\n');
+        }
+    });
+    connect(ok,&QPushButton::clicked,[&](){
+        //对每个索引
+        for(int i=0;i<list_widget->count();i++)
+        {
+            auto item=list_widget->item(i);
+            QStringList content=item->data(Qt::UserRole).value<QStringList>();
+            //添加每一项
+            for(int j=1;j<content.size();j++)
+                note.add(content.value(0),content[j],ui->note_key_treeWidget);
+        }
+        preview_window->close();
+    });
+    connect(cancel,&QPushButton::clicked,[&](){
+        preview_window->close();
+    });
+    connect(Refresh,&QPushButton::clicked,[&](){
+        list_widget->clear();
+        edit->clear();
+        edit->setPlainText("双击左侧索引以查看详细内容");
+        //添加摘抄笔记索引
+        auto text=QGuiApplication::clipboard()->text();
+        text=text.trimmed();
+
+        auto item_list=text.split('#');
+        if(text[0]!='#')
+            item_list.removeAt(0);
+
+        for(auto item:item_list)
+        {
+            auto contents=item.split('\n',QString::SkipEmptyParts);
+            if(contents.size()<2)continue;
+
+            QListWidgetItem *tree_item=new QListWidgetItem({contents[0]});
+            tree_item->setData(Qt::UserRole,QVariant::fromValue(contents));
+            list_widget->addItem(tree_item);
+        }
+    });
+    preview_window->exec();
+
+    delete preview_window;
 }

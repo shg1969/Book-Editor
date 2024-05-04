@@ -528,6 +528,8 @@ Chapter::Chapter(QDataStream &In,int version)
 {
     switch(version)
     {
+//    case 2:
+//        In>>mark_cursor_pos;
     case 1:
         In>>comment;
         In>>imitating;
@@ -546,6 +548,7 @@ Chapter::Chapter(QDataStream &In,int version)
 
 void Chapter::write(QDataStream &Out)
 {
+//    Out<<mark_cursor_pos;
     Out<<comment;
     Out<<imitating;
     Out<<vol_index;
@@ -559,6 +562,8 @@ void Chapter::close(bool save,QTabWidget *container)
     //保存
     if(save)
         txt=edit_tab->toPlainText();
+    //保存阅读位置
+//    if(edit_tab)mark_cursor_pos=edit_tab->cursorForPosition({edit_tab->viewport()->width(),edit_tab->viewport()->height()}).position();
     //关闭页面
     if(container!=Q_NULLPTR&&edit_tab!=Q_NULLPTR)
     {
@@ -575,6 +580,14 @@ void Chapter::open(TextEdit *p, int line_height)
     edit_tab=p;
     edit_tab->clear();
     edit_tab->setText(txt,line_height);
+    //滚动到上次打开的位置
+//    if(!p)return;
+////    p->selectAll();//将光标位置调到最后
+//    auto c=p->textCursor();
+//    qDebug()<<"最初位置"<<c.position();
+//    qDebug()<<name<<" 位置："<<mark_cursor_pos;
+//    c.setPosition(mark_cursor_pos);
+//    p->setTextCursor(c);
 }
 
 TextEdit *Chapter::get_tab_pointer()

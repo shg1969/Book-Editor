@@ -30,6 +30,7 @@
 #include<QFileSystemModel>
 #include <QTreeWidgetItem>
 #include <QStringListModel>
+#include <QClipboard>
 #include"inc/note.h"
 #define APP_NAME QString("读写助手")
 #define COUNT_WORD_MSG(num) (QString("本章字数：%1").arg(num))
@@ -206,5 +207,7 @@ private slots:
     void on_note_key_treeWidget_itemClicked(QTreeWidgetItem *item, int column);
     void on_action_next_chapter_triggered();
     void on_action_pre_chapter_triggered();
+    void on_actionExport_notes_triggered();
+    void on_actionAppend_notes_from_ClipBoard_triggered();
 };
 #endif // MAINWINDOW_H

@@ -77,6 +77,33 @@ void Note::save(QString file_dir)
     f.close();
 }
 
+void Note::save_as_txt(QString file_dir)
+{
+    if(file_dir.size()==0)return;
+    QFile f(file_dir);
+    if(!f.open(QIODevice::WriteOnly))
+    {
+        QMessageBox::warning(Q_NULLPTR,"打开文件","打开word list文件失败！");
+        return;
+    }
+    QTextStream Out(&f);
+
+    QDateTime dateTime= QDateTime::currentDateTime();//获取系统当前的时间
+    QString export_time = dateTime .toString("yyyy-MM-dd hh:mm:ss");//格式化时间
+
+    Out<<"\t\t*******导出时间："+export_time+"*******\t\t";
+    //获取笔记文本
+    QString res;
+    for(auto &i:data)
+    {
+        res.append("\n\n\n#"+i.getKey_structure()+"\n");
+        res.append(i.getContent_TXT());
+    }
+    //写入到文件
+    Out<<res;
+    f.close();
+}
+
 Note_Item* Note::add(const QString &lever_key, const QString &content,QTreeWidget*tree)
 {
     if(lever_key.size()==0||content.size()==0||tree==Q_NULLPTR)return Q_NULLPTR;
@@ -141,7 +168,8 @@ Note_Item* Note::add(const QString &lever_key, const QString &content,QTreeWidge
         //若已经存在该key
         if(lever_key==node.getKey_structure())
         {
-            node.append(content);
+            if(!node.getContent().contains(content))
+                node.append(content);
             return &node;
         }
     }
@@ -214,6 +242,17 @@ void Note_Item::setKey_structure(const QString &value)
 QStringList Note_Item::getContent() const
 {
     return content;
+}
+
+//获取本条目笔记文本
+QString Note_Item::getContent_TXT() const
+{
+    QString res;
+    for(auto i:content)
+    {
+        res.append('\n'+i+'\n');
+    }
+    return res;
 }
 
 void Note_Item::setContent(const QStringList &value)
