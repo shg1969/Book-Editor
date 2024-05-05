@@ -9,6 +9,15 @@ bool Note::read(QString file_dir,QTreeWidget*tree)
 {
     //打开文件，获取数据流
     if(file_dir.size()==0)return 0;
+
+    //检查是否有为保存到的自动备份文件
+    if(QFile::exists(file_dir+AUTO_SAVE_NOTES_Extension))
+    {
+        auto res=QMessageBox::question(Q_NULLPTR,"提示","目录下存在早期笔记的备份文件，是否加载？");
+        if(res==QMessageBox::Yes)
+            file_dir+=AUTO_SAVE_NOTES_Extension;
+    }
+
     bool res=0;
     QFile f(file_dir);
     if(!f.open(QIODevice::ReadOnly))
@@ -57,9 +66,14 @@ bool Note::read(QString file_dir,QTreeWidget*tree)
     return res;
 }
 
-void Note::save(QString file_dir)
+void Note::save(QString file_dir,bool manual_1_or_auto_0)
 {
     if(file_dir.size()==0)return;
+
+    //若是自动保存模式，定位到自动保存文件
+    if(manual_1_or_auto_0==0)
+        file_dir+=AUTO_SAVE_NOTES_Extension;
+
     QFile f(file_dir);
     if(!f.open(QIODevice::WriteOnly))
     {
@@ -75,6 +89,11 @@ void Note::save(QString file_dir)
         Out<<i.getContent();
     }
     f.close();
+
+    //若是自动保存模式，删除备份文件
+    if(manual_1_or_auto_0&&QFile::exists(file_dir+AUTO_SAVE_NOTES_Extension))          //手动保存时，删除以往的备份文件
+    if(!QFile::remove(file_dir+AUTO_SAVE_NOTES_Extension))
+        QMessageBox::warning(Q_NULLPTR,"警报","备份文件删除失败！");
 }
 
 void Note::save_as_txt(QString file_dir)

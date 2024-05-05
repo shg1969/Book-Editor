@@ -32,6 +32,9 @@
 #define TEXT_DIR (QString("C:/Users/lei/Desktop/读书/经典/"))
 //获取图片文件的默认打开路径
 #define PICTURE_DIR (QString("C:/Users/lei/Desktop/pictures/"))
+//自动保存文件的后缀
+#define AUTO_SAVE_BOOK_Extension (QString("_auto"))
+
 //书籍版本
 #define BOOK_VERSION_0 (QString("0_***version_&&&***"))
 #define BOOK_VERSION_1 (QString("1_***version_&&&***"))
@@ -102,7 +105,9 @@ public:
     void open(QString book_dir);//打开书籍文件
     void load();                //从TXT文件导入书籍
     void create();              //创建新书籍文件
-    void save();                //保存更改
+
+    //保存更改:bool manual_1_or_auto_0=1时，保存到临时文件，手动保存则替换原文件
+    void save(bool manual_1_or_auto_0=1);
     void save_as();             //保存更改
     void remove();              //从目录删除
 

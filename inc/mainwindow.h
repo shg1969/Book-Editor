@@ -8,6 +8,7 @@
 #include<QColor>
 #include<QLabel>
 #include<QPair>
+#include<QTimer>
 #include<QHash>
 #include<QVector>
 #include<QSettings>
@@ -31,7 +32,9 @@
 #include <QTreeWidgetItem>
 #include <QStringListModel>
 #include <QClipboard>
-#include"inc/note.h"
+#include "inc/note.h"
+#include "setting_dialog.h"
+
 #define APP_NAME QString("读写助手")
 #define COUNT_WORD_MSG(num) (QString("本章字数：%1").arg(num))
 
@@ -58,25 +61,45 @@ signals:
     void theme_changed(bool mode);
 public slots:
     void on_actionDark_Mode_triggered(bool checked);    //夜间模式
+
+    void restart_book_timer(int time_min)
+    {
+        save_book_timer->start(time_min*60000);
+    }
+    void restart_notes_timer(int time_min)
+    {
+        save_notes_timer->start(time_min*60000);
+    }
+    void auto_save_book();
+    void auto_save_notes();
 private:
     Ui::MainWindow *ui;
     Book book;
-    QLabel *label_count_word;
+    Setting_Data setting_data;
+    QTimer *save_book_timer = new QTimer(this);
+    QTimer *save_notes_timer = new QTimer(this);
+
     QLabel *label_rw_mode;
+//    bool auto_set_focus;
+//    QString background_color_sheet;         //背景颜色
+//    QTextCharFormat fmt;                    //字体格式
+//    bool R_W_mode;                          //读写模式
+//    int text_margin;                        //文本编辑框内的文本边距
+//    int line_height;                          //文本编辑框内的文本行距
+//    int letter_space;                       //文本编辑框内的文本字距
+
+    QLabel *label_count_word;
     bool is_modefied;
-    bool auto_set_focus;
     QVector<QPair<int,int>> last_opened_chapter;//最后展开的卷、章节号
-    QString background_color_sheet;         //背景颜色
-    QTextCharFormat fmt;                    //字体格式
     int search_option;                      //0:对当前章节正文，1：对全书章节名，2：对全书正文
 
     Note note;
-    Note_Item *the_Item_showing;                //当前右侧窗口显示的笔记所属的key
-    bool R_W_mode;                          //读写模式
-    int text_margin;                        //文本编辑框内的文本边距
-    int line_height;                          //文本编辑框内的文本行距
-//    int letter_space;                       //文本编辑框内的文本字距
+    Note_Item *the_current_note_item;                //当前右侧窗口显示的笔记所属的key
 
+    //笔记添加记录
+    QString last_added_key;//上一个被添加的笔记索引
+    QString last_added_content;//上一个被添加的笔记内容
+    //补全器
     QCompleter *completer;
     QStringList wordList;
 
@@ -180,8 +203,8 @@ private slots:
     void on_replace_current_btn_clicked();
     void on_replace_all_btn_clicked();
     //摘录
-    //添加
-    void add_note(QString key,QString content);
+    //添加，成功的有效添加操作返回1，因各种原因无法完成实际的添加，返回0
+    bool add_note(QString key,QString content);
     void pop_up_to_add_note(QString the_content_to_add_note);
     void on_auto_focus_checkBox_stateChanged(int arg1);//自动聚焦到key编辑框
     void on_note_key_LineEdit_returnPressed();
@@ -189,7 +212,7 @@ private slots:
     void on_note_content_LineEdit_returnPressed();
     //    void on_note_renew_key_list_btn_clicked();
     //显示
-    void show_key_content(const QStringList &key);
+    void show_key_content(Note_Item *item);
     void on_node_rm_row_btn_clicked();
     void on_node_edit_note_btn_clicked();
     void on_note_select_row_spinBox_valueChanged(int arg1);
@@ -209,5 +232,9 @@ private slots:
     void on_action_pre_chapter_triggered();
     void on_actionExport_notes_triggered();
     void on_actionAppend_notes_from_ClipBoard_triggered();
+    void on_btn_show_current_notes_clicked();
+    void on_btn_undo_add_note_clicked();
+    void on_actionSetting_triggered();
 };
+
 #endif // MAINWINDOW_H

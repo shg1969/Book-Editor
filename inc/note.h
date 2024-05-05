@@ -18,6 +18,8 @@
 #define NOTE_VERSION_0 (QString("0_***version_&&&***"))
 //#define NOTE_VERSION_1 (QString("1_***version_&&&***"))
 
+//自动保存文件的后缀
+#define AUTO_SAVE_NOTES_Extension (QString("_auto"))
 
 class Note_Item
 {
@@ -44,7 +46,7 @@ public:
     QTreeWidgetItem *getWidget_item() const;
 
     void append(const QString &piece);
-    inline int count_piece(){return content.size();}
+    int count_piece(){return content.size();}
     void remove_at(int i)
     {
         if(i<0||i>=content.size())return;
@@ -62,6 +64,10 @@ public:
     inline QString get_key_name()
     {
         return key_structure.split('-').back();
+    }
+    bool remove_one(const QString piece)
+    {
+        return content.removeOne(piece);
     }
 
 
@@ -81,7 +87,7 @@ public:
     Note();
 
     bool read(QString file_dir,QTreeWidget*tree);
-    void save(QString file_dir);
+    void save(QString file_dir,bool manual_1_or_auto_0=1);
     void save_as_txt(QString file_dir);
 
     Note_Item* add(const QString &lever_key,const QString &content,QTreeWidget*tree);

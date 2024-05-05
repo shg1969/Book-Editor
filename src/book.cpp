@@ -36,6 +36,15 @@ void Book::open(QString book_dir)
 {
     //参数检查
     if(!book_dir.size())return;
+
+    //检查是否有为保存到的自动备份文件
+    if(QFile::exists(book_dir+AUTO_SAVE_BOOK_Extension))
+    {
+        auto res=QMessageBox::question(Q_NULLPTR,"提示","书架目录下存在“"+info.name+"”的备份文件，是否加载？");
+        if(res==QMessageBox::Yes)
+            book_dir+=AUTO_SAVE_BOOK_Extension;
+    }
+
     //打开文件
     QFile f(book_dir);
     if(!f.open(QIODevice::ReadOnly))
@@ -315,13 +324,13 @@ void Book::create()
     w.exec();
 }
 
-void Book::save()
+void Book::save(bool manual_1_or_auto_0)
 {
     QFile f;
-    QString file_name;
     //规范书名
     if(info.name.left(8)=="undefine"||!info.name.size())
     {
+        QString file_name;
         file_name=QFileDialog::getSaveFileName(Q_NULLPTR,"保存文件",TOP_DIR);
         if(file_name.size()==0)return;
         while(!file_name.size())
@@ -330,11 +339,19 @@ void Book::save()
             file_name=QFileDialog::getSaveFileName(Q_NULLPTR,"保存文件",TOP_DIR);
         }
 
-        f.setFileName(file_name);
+        if(manual_1_or_auto_0)          //手动保存的目标文件
+            f.setFileName(file_name);
+        else                            //自动保存的临时目标文件
+            f.setFileName(file_name+AUTO_SAVE_BOOK_Extension);
         info.name=file_name.split("/").last();
     }
     else
-        f.setFileName(TOP_DIR+info.name);
+    {
+        if(manual_1_or_auto_0)          //手动保存的目标文件
+            f.setFileName(TOP_DIR+info.name);
+        else                            //自动保存的临时目标文件
+            f.setFileName(TOP_DIR+info.name+AUTO_SAVE_BOOK_Extension);
+    }
     //打开书籍
     if(!f.open(QIODevice::WriteOnly))
     {
@@ -361,6 +378,10 @@ void Book::save()
         }
     }
     f.close();
+
+    if(manual_1_or_auto_0&&QFile::exists(TOP_DIR+info.name+AUTO_SAVE_BOOK_Extension))          //手动保存时，删除以往的备份文件
+        if(!QFile::remove(TOP_DIR+info.name+AUTO_SAVE_BOOK_Extension))
+            QMessageBox::warning(Q_NULLPTR,"警报","备份文件删除失败！");
 }
 
 void Book::save_as()

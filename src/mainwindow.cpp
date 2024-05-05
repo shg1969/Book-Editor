@@ -44,11 +44,11 @@ MainWindow::MainWindow(QWidget *parent)
         note.read(NOTE_CONTENT,ui->note_key_treeWidget);
     }
 
-    auto_set_focus=0;
-    R_W_mode=0;
-    text_margin=49;
-    line_height=45;
-//    letter_space=45;
+    setting_data.auto_set_focus=0;
+    setting_data.R_W_mode=0;
+    setting_data.text_margin=49;
+    setting_data.line_height=45;
+
     //载入配置信息
     readSettings();
 
@@ -76,14 +76,14 @@ MainWindow::MainWindow(QWidget *parent)
     //设置字体类型
     font_toolbar->addWidget(select_font_tpye);
 //    renew_viewport_format(select_font_tpye->currentFont().family());
-    select_font_tpye->setCurrentFont(fmt.font());
+    select_font_tpye->setCurrentFont(setting_data.fmt.font());
     connect(select_font_tpye,&QFontComboBox::currentFontChanged,[this](const QFont &font){renew_viewport_format(font.family());});
     //设置字体大小
     auto spinBox_Size = new QSpinBox(font_toolbar);
     font_toolbar->addWidget(new QLabel("字体大小：",this));
     font_toolbar->addWidget(spinBox_Size);
     spinBox_Size->setRange(4,100);
-    spinBox_Size->setValue(fmt.fontPointSize());
+    spinBox_Size->setValue(setting_data.fmt.fontPointSize());
 //    renew_viewport_format(18);
     connect(spinBox_Size, static_cast<void(QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, static_cast<void(MainWindow::*)(int)>(&MainWindow::renew_viewport_format));
     font_toolbar->addSeparator();
@@ -104,11 +104,11 @@ MainWindow::MainWindow(QWidget *parent)
         int r=0,g=0,b=0;
         auto color=QColorDialog::getColor();
         color.getRgb(&r,&g,&b);
-        this->background_color_sheet="background-color:rgb("
+        this->setting_data.background_color_sheet="background-color:rgb("
                 +QString::number(r)+","
                 +QString::number(g)+","
                 +QString::number(b)+")";
-        w->setStyleSheet(background_color_sheet);
+        w->setStyleSheet(setting_data.background_color_sheet);
     });
 
     //窗口右下角显示字数
@@ -313,32 +313,32 @@ void MainWindow::renew_viewport_format()
     auto w=current_page();
     if(!w)return;
 
-    if(w->currentCharFormat()==fmt)return;
+    if(w->currentCharFormat()==setting_data.fmt)return;
     //背景颜色
-    w->setStyleSheet(this->background_color_sheet);
+    w->setStyleSheet(this->setting_data.background_color_sheet);
     //字体格式
 //    w->mergeCurrentCharFormat(fmt);
-    w->setCurrentCharFormat(fmt);
+    w->setCurrentCharFormat(setting_data.fmt);
 
     auto corsor=w->textCursor();
     corsor.select(QTextCursor::Document);
-    corsor.setCharFormat(fmt);
+    corsor.setCharFormat(setting_data.fmt);
     corsor.clearSelection();
 }
 void MainWindow::renew_viewport_format(int size)
 {
-    fmt.setFontPointSize(size);
+    setting_data.fmt.setFontPointSize(size);
 
     auto w=current_page();
     if(!w)return;
     //字体格式
 //    w->mergeCurrentCharFormat(fmt);
-    w->setCurrentCharFormat(fmt);
+    w->setCurrentCharFormat(setting_data.fmt);
     writeSettings();
 
     auto corsor=w->textCursor();
     corsor.select(QTextCursor::Document);
-    corsor.setCharFormat(fmt);
+    corsor.setCharFormat(setting_data.fmt);
     corsor.clearSelection();
 }
 void MainWindow::renew_viewport_format(QColor font_color)
@@ -346,16 +346,16 @@ void MainWindow::renew_viewport_format(QColor font_color)
     auto w=current_page();
     if(!w)return;
 
-    fmt.setForeground(font_color);
+    setting_data.fmt.setForeground(font_color);
 
     //字体格式
 //    w->mergeCurrentCharFormat(fmt);
-    w->setCurrentCharFormat(fmt);
+    w->setCurrentCharFormat(setting_data.fmt);
     writeSettings();
 
     auto corsor=w->textCursor();
     corsor.select(QTextCursor::Document);
-    corsor.setCharFormat(fmt);
+    corsor.setCharFormat(setting_data.fmt);
     corsor.clearSelection();
 }
 void MainWindow::renew_viewport_format(const QString &font_family)
@@ -363,16 +363,16 @@ void MainWindow::renew_viewport_format(const QString &font_family)
     auto w=current_page();
     if(!w)return;
 
-    fmt.setFontFamily(font_family);
+    setting_data.fmt.setFontFamily(font_family);
 
     //字体格式
 //    w->mergeCurrentCharFormat(fmt);
-    w->setCurrentCharFormat(fmt);
+    w->setCurrentCharFormat(setting_data.fmt);
     writeSettings();
 
     auto corsor=w->textCursor();
     corsor.select(QTextCursor::Document);
-    corsor.setCharFormat(fmt);
+    corsor.setCharFormat(setting_data.fmt);
     corsor.clearSelection();
 }
 
@@ -425,8 +425,8 @@ void MainWindow::open_chapter(Chapter *chapter_p)
     if(chapter_p==Q_NULLPTR)return;
     if(chapter_p->get_tab_pointer()==Q_NULLPTR)
     {
-        TextEdit *new_tab=new TextEdit(R_W_mode,this);
-        new_tab->document()->setDocumentMargin(text_margin);
+        TextEdit *new_tab=new TextEdit(setting_data.R_W_mode,this);
+        new_tab->document()->setDocumentMargin(setting_data.text_margin);
         new_tab->setAcceptRichText(0);
         chapter_p->open(new_tab);
         if(!last_opened_chapter.contains({chapter_p->vol_index,chapter_p->chapter_index}))
@@ -444,7 +444,7 @@ void MainWindow::open_chapter(Chapter *chapter_p)
             if(current_edit==Q_NULLPTR)return;
             ui->note_content_LineEdit->setText(current_edit->textCursor().selectedText());
 
-            if(auto_set_focus==0)return;
+            if(setting_data.auto_set_focus==0)return;
             ui->note_key_LineEdit->setFocus();
             ui->note_key_LineEdit->selectAll();
         });
@@ -564,7 +564,7 @@ void MainWindow::on_tabWidget_currentChanged(int index)
     //统计本章字数
     auto w=current_page();
     if(w==Q_NULLPTR)return;
-    w->set_line_height(line_height);
+    w->set_line_height(setting_data.line_height);
     renew_word_num_showing();
     //同步文字显示格式
     renew_viewport_format();
@@ -757,7 +757,7 @@ void MainWindow::on_actionAdd_Blank_Lines_triggered()
         {
             str+=i+"\n\n";
         }
-        edit->setText(str,line_height);
+        edit->setText(str,setting_data.line_height);
     }
     is_modefied=1;
 }
@@ -774,7 +774,7 @@ void MainWindow::on_actionRemove_Space_triggered()
             if(i.isSpace()&&i!='\n')continue;
             s+=i;
         }
-        edit->setText(s,line_height);
+        edit->setText(s,setting_data.line_height);
     }
     is_modefied=1;
 }
@@ -783,20 +783,56 @@ void MainWindow::on_actionDark_Mode_triggered(bool checked)
 {
     if(checked)
     {
-        this->background_color_sheet="background-color:#474536";
+        this->setting_data.background_color_sheet="background-color:#474536";
         auto w=current_page();
-        if(w)w->setStyleSheet(background_color_sheet);
+        if(w)w->setStyleSheet(setting_data.background_color_sheet);
         renew_viewport_format(QColor(Qt::white));
     }
     else
     {
         renew_viewport_format(QColor(Qt::black));
-        this->background_color_sheet="background-color:#a1a554";
+        this->setting_data.background_color_sheet="background-color:#a1a554";
         auto w=current_page();
-        if(w)w->setStyleSheet(background_color_sheet);
+        if(w)w->setStyleSheet(setting_data.background_color_sheet);
         renew_viewport_format(QColor(Qt::black));
     }
     emit theme_changed(checked);
+}
+
+void MainWindow::auto_save_book()
+{
+    //若无更改，不备份
+    if(!is_modefied)return;
+
+    //更新正文
+    for(auto i=0;i<ui->tabWidget->count();i++)
+    {
+        auto tab=dynamic_cast<TextEdit*>(ui->tabWidget->widget(i));
+        Chapter*c=book.find_chapter(tab);
+        if(c!=Q_NULLPTR)
+            c->txt=tab->toPlainText();
+    }
+    //更新分卷
+    book.volume_names.clear();
+    for(int i=0;i<ui->dir_treeWidget->topLevelItemCount();i++)
+    {
+        auto item=ui->dir_treeWidget->topLevelItem(i);
+        if(item)
+        {
+            book.volume_names.push_back(item->text(0));
+        }
+    }
+    book.save(0);                //保存书籍
+    ui->statusBar->showMessage("备份操作完成");
+//    qDebug()<<"备份了";
+}
+
+void MainWindow::auto_save_notes()
+{
+    //若无更改，不备份
+    if(!is_modefied)return;
+
+    note.save(NOTE_CONTENT,0);
 }
 
 void MainWindow::on_search_option_comboBox_currentTextChanged(const QString &arg1)
@@ -816,12 +852,12 @@ void MainWindow::search_in_textedit(Chapter *c,QString key_word)
     //获取搜索关键字长度
     int key_length=key_word.length();
     if(key_length<1)return;
-//    //设置标注颜色
-//    QTextCharFormat fmt;
-//    auto back_col=QColor(245,255,152);
-//    auto font_col=QColor(0,85,255);
-//    fmt.setForeground(font_col);
-//    fmt.setBackground(back_col);
+    //    //设置标注颜色
+    //    QTextCharFormat fmt;
+    //    auto back_col=QColor(245,255,152);
+    //    auto font_col=QColor(0,85,255);
+    //    fmt.setForeground(font_col);
+    //    fmt.setBackground(back_col);
 
     if(c->get_tab_pointer()==Q_NULLPTR)//对于未打开浏览的章节
     {
@@ -994,7 +1030,7 @@ void MainWindow::on_find_all_btn_clicked()
 
 void MainWindow::on_auto_focus_checkBox_stateChanged(int arg1)
 {
-    auto_set_focus=arg1;
+    setting_data.auto_set_focus=arg1;
     if(arg1)ui->note_key_LineEdit->setFocus();
 }
 
@@ -1183,7 +1219,7 @@ void MainWindow::on_replace_all_btn_clicked()
 
             if(c.get_tab_pointer()!=Q_NULLPTR)
             {
-                c.get_tab_pointer()->setText(c.txt,line_height);
+                c.get_tab_pointer()->setText(c.txt,setting_data.line_height);
             }
         }
     }
@@ -1200,10 +1236,11 @@ void MainWindow::pop_up_to_add_note(QString the_content_to_add_note)
     add_note(ans,the_content_to_add_note);
 }
 
-void MainWindow::add_note(QString key, QString content)
+bool MainWindow::add_note(QString key, QString content)
 {
     key=key.trimmed();
-    if(key.size()==0)return;
+    if(key.size()==0)return 0;
+    //更新待选索引
     if(!wordList.contains(key))
     {
         renew_completer({key});
@@ -1211,22 +1248,40 @@ void MainWindow::add_note(QString key, QString content)
     if(note.add(key,content,ui->note_key_treeWidget))
     {
         ui->statusBar->showMessage("成功添加："+content+"-->"+key);
+        return 1;
 //        show_key_content(note.find_node(key)->getContent());
     }
     else
         ui->statusBar->showMessage("空白无效，添加失败！");
+    return 0;
 }
 
-void MainWindow::show_key_content(const QStringList &content)
+void MainWindow::show_key_content(Note_Item *item)
 {
+    if(!item)return;
+    the_current_note_item=item;
+
     //页面设置
     ui->note_textEdit->clear();
-    ui->note_select_row_spinBox->setRange(0,content.size()-1);
+    ui->note_select_row_spinBox->setMaximum(item->count_piece()-1);
     ui->note_textEdit->setFontPointSize(ui->note_content_showing_font_size->value());
+    auto current_value=ui->note_select_row_spinBox->value();
+//    if(!the_Item_showing)
+//        the_Item_showing=note.find_node()
+    if(current_value<0||current_value>=item->count_piece())
+    {
+        ui->node_edit_note_btn->setEnabled(0);
+        ui->node_rm_row_btn->setEnabled(0);
+    }
+    else
+    {
+        ui->node_edit_note_btn->setEnabled(1);
+        ui->node_rm_row_btn->setEnabled(1);
+    }
     //获取内容
     QString s;
     int count=0;
-    for(auto &i:content)
+    for(auto &i:item->getContent())
     {
         s+="\n------"+QString::number(count)+"------\n"+i;
         count++;
@@ -1239,9 +1294,17 @@ void MainWindow::show_key_content(const QStringList &content)
 void MainWindow::on_note_key_LineEdit_returnPressed()
 {
     auto key=ui->note_key_LineEdit->text();
-    auto content=ui->note_content_LineEdit->text();
+    ui->note_key_LineEdit->selectAll();
 
-    add_note(key,content);
+    auto content=ui->note_content_LineEdit->text();
+    //由于索引修改了，清空笔记输入框
+    ui->note_content_LineEdit->clear();
+
+    if(add_note(key,content))
+    {
+        last_added_key=key;
+        last_added_content=content;
+    }
     is_modefied=1;
 }
 
@@ -1253,11 +1316,11 @@ void MainWindow::on_note_save_btn_clicked()
 void MainWindow::on_node_rm_row_btn_clicked()
 {
     //修改
-    if(!the_Item_showing)return;
+    if(!the_current_note_item)return;
     int obj=ui->note_select_row_spinBox->value();
-    the_Item_showing->remove_at(obj);
+    the_current_note_item->remove_at(obj);
     //刷新显示
-    show_key_content(the_Item_showing->getContent());
+    show_key_content(the_current_note_item);
     is_modefied=1;
 }
 
@@ -1265,8 +1328,8 @@ void MainWindow::on_node_edit_note_btn_clicked()
 {
     int obj_index=ui->note_select_row_spinBox->value();
 
-    QString msg="编辑“"+the_Item_showing->get_key_name()+"”中的第"+QString::number(obj_index)+"项";
-    QString old_str=the_Item_showing->get_piece_at(obj_index);
+    QString msg="编辑“"+the_current_note_item->get_key_name()+"”中的第"+QString::number(obj_index)+"项";
+    QString old_str=the_current_note_item->get_piece_at(obj_index);
 
     QDialog dialog;
     dialog.setWindowTitle(msg);
@@ -1286,10 +1349,10 @@ void MainWindow::on_node_edit_note_btn_clicked()
         auto ans=edit.toPlainText();
         if(ans.size()==0)return;
         //修改
-        the_Item_showing->set_piece_at(obj_index,ans.trimmed());
+        the_current_note_item->set_piece_at(obj_index,ans.trimmed());
 
         //刷新显示
-        show_key_content(the_Item_showing->getContent());
+        show_key_content(the_current_note_item);
         auto res=ui->note_textEdit->find("------"+QString::number(obj_index)+"------");
         if(res)ui->note_textEdit->textCursor().clearSelection();
 
@@ -1304,9 +1367,21 @@ void MainWindow::on_node_edit_note_btn_clicked()
 
 void MainWindow::on_note_select_row_spinBox_valueChanged(int arg1)
 {
-    int max=the_Item_showing->count_piece()-1;
-    if(arg1>=max)
-        ui->note_select_row_spinBox->setValue(max);
+//    int max=the_Item_showing->count_piece()-1;
+//    if(arg1>=max&&max>=0)
+//        ui->note_select_row_spinBox->setValue(max);
+
+    auto current_value=ui->note_select_row_spinBox->value();
+    if(current_value<0||current_value>=the_current_note_item->count_piece())
+    {
+        ui->node_edit_note_btn->setEnabled(0);
+        ui->node_rm_row_btn->setEnabled(0);
+    }
+    else
+    {
+        ui->node_edit_note_btn->setEnabled(1);
+        ui->node_rm_row_btn->setEnabled(1);
+    }
 }
 
 void MainWindow::on_actionDelete_bank_row_triggered()
@@ -1323,7 +1398,7 @@ void MainWindow::on_actionDelete_bank_row_triggered()
             if(i.isEmpty())continue;
             s+=i+'\n';
         }
-        edit->setText(s,line_height);
+        edit->setText(s,setting_data.line_height);
     }
     is_modefied=1;
 }
@@ -1673,9 +1748,9 @@ void MainWindow::writeSettings()
         return;
     }
     QDataStream out(&f);
-    out<<fmt.font();
-    out<<fmt.foreground();
-    out<<background_color_sheet;
+    out<<setting_data.fmt.font();
+    out<<setting_data.fmt.foreground();
+    out<<setting_data.background_color_sheet;
 
     out<<book.info.name;
     qDebug()<<book.info.name;
@@ -1696,10 +1771,10 @@ void MainWindow::writeSettings()
     }
     out<<vol;
     out<<ch;
-    out<<this->text_margin;
-    out<<this->line_height;
-    out<<this->R_W_mode;
-    out<<auto_set_focus;
+    out<<this->setting_data.text_margin;
+    out<<this->setting_data.line_height;
+    out<<this->setting_data.R_W_mode;
+    out<<setting_data.auto_set_focus;
 
     out<<last_opened_chapter.size();
     for(auto i:last_opened_chapter)
@@ -1716,10 +1791,10 @@ void MainWindow::readSettings()
     if(!f.open(QIODevice::ReadOnly))
     {
         QMessageBox::warning(Q_NULLPTR,"错误","打开配置文件失败！");
-        text_margin=40;
-        line_height=45;
-        R_W_mode=1;
-        auto_set_focus=1;
+        setting_data.text_margin=40;
+        setting_data.line_height=45;
+        setting_data.R_W_mode=1;
+        setting_data.auto_set_focus=1;
         return;
     }
     QDataStream In(&f);
@@ -1728,9 +1803,9 @@ void MainWindow::readSettings()
     QBrush brush;
     In>>font;
     In>>brush;
-    fmt.setFont(font);
-    fmt.setForeground(brush);
-    In>>background_color_sheet;
+    setting_data.fmt.setFont(font);
+    setting_data.fmt.setForeground(brush);
+    In>>setting_data.background_color_sheet;
 
     QString last_book;
     In>>last_book;
@@ -1739,12 +1814,12 @@ void MainWindow::readSettings()
     int vol=0,ch=0;
     In>>vol;
     In>>ch;
-    In>>this->text_margin;
-    if(text_margin<1)text_margin=40;
-    In>>this->line_height;
-    if(line_height<10)line_height=45;
-    In>>this->R_W_mode;
-    In>>auto_set_focus;
+    In>>this->setting_data.text_margin;
+    if(setting_data.text_margin<1)setting_data.text_margin=40;
+    In>>this->setting_data.line_height;
+    if(setting_data.line_height<10)setting_data.line_height=45;
+    In>>this->setting_data.R_W_mode;
+    In>>setting_data.auto_set_focus;
 
     int size=0;
     In>>size;
@@ -1759,7 +1834,7 @@ void MainWindow::readSettings()
 
     /*********************************读取完毕，完成相关设置*****************************************/
     //设置是否打开自动聚焦
-    if(auto_set_focus)ui->auto_focus_checkBox->setChecked(auto_set_focus);
+    if(setting_data.auto_set_focus)ui->auto_focus_checkBox->setChecked(setting_data.auto_set_focus);
     //打开上次打开的书籍、章节
     if(last_book.size()&&!last_book.contains("undifine")&&book.info.name!=last_book)
     {
@@ -1775,9 +1850,13 @@ void MainWindow::readSettings()
             ui->dir_treeWidget->scrollToItem(vol_item->child(ch));
         }
     }
+    //自动保存
+    connect(save_book_timer,&QTimer::timeout,this,&MainWindow::auto_save_book);
+    connect(save_notes_timer,&QTimer::timeout,this,&MainWindow::auto_save_notes);
+    save_book_timer->start(1000*60*10);//每十分钟自动备份一次
+    save_notes_timer->start(1000*60*2);     //每两分钟自动备份一次
 
     f.close();
-
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -1811,19 +1890,19 @@ void MainWindow::on_action_read_mode_triggered()
         layout.setMargin(0);
 
         TextEdit reader(1,&dialog);
-        reader.setReadOnly(R_W_mode);
+        reader.setReadOnly(setting_data.R_W_mode);
         layout.addWidget(&reader);
         reader.setContextMenuPolicy(Qt::CustomContextMenu);
-        reader.setText(w->toPlainText(),line_height);
+        reader.setText(w->toPlainText(),setting_data.line_height);
 
         //设置显示格式
-        reader.document()->setDocumentMargin(text_margin);  //边距
-        reader.setCurrentCharFormat(fmt);                   //字体格式
-        reader.setStyleSheet(background_color_sheet);       //背景样式
+        reader.document()->setDocumentMargin(setting_data.text_margin);  //边距
+        reader.setCurrentCharFormat(setting_data.fmt);                   //字体格式
+        reader.setStyleSheet(setting_data.background_color_sheet);       //背景样式
 
         auto cursor=reader.textCursor();
         cursor.select(QTextCursor::Document);
-        cursor.setCharFormat(fmt);
+        cursor.setCharFormat(setting_data.fmt);
         cursor.clearSelection();
 
 //        //设置阅读位置
@@ -1857,13 +1936,13 @@ void MainWindow::on_action_read_mode_triggered()
             if(!reader.textCursor().hasSelection())
                 menu.removeAction(act_add_note);
 
-            auto fore_color=fmt.foreground().color();
-            auto sheet="QMenu {"+background_color_sheet+";"
+            auto fore_color=setting_data.fmt.foreground().color();
+            auto sheet="QMenu {"+setting_data.background_color_sheet+";"
                                "color:rgb("
                                +QString::number(fore_color.red())+","
                                +QString::number(fore_color.green())+","
                                +QString::number(fore_color.blue())+")"+";border: 2px solid black;}"
-                               "QMenu::item {"+background_color_sheet+";}"
+                               "QMenu::item {"+setting_data.background_color_sheet+";}"
 //                               "QMenu::item:disabled{color:rgb("
 //                                    +QString::number(255-fore_color.red())+","
 //                                    +QString::number(255-fore_color.green())+","
@@ -1888,7 +1967,7 @@ void MainWindow::on_action_read_mode_triggered()
                 {
                     chapter_current=&book.data[v][c-1];
                 }
-                reader.setText(chapter_current->txt,line_height);
+                reader.setText(chapter_current->txt,setting_data.line_height);
             });
 
             connect(next_chapter,&QAction::triggered,[&]{
@@ -1902,7 +1981,7 @@ void MainWindow::on_action_read_mode_triggered()
                 {
                     chapter_current=&book.data[v][c+1];
                 }
-                reader.setText(chapter_current->txt,line_height);
+                reader.setText(chapter_current->txt,setting_data.line_height);
             });
             connect(exit,&QAction::triggered,[&]{
                 dialog.close();
@@ -2153,10 +2232,10 @@ void MainWindow::on_note_key_treeWidget_customContextMenuRequested(const QPoint 
     if(!obj_node)return;
     //更新当前笔记项
     ui->show_nodes_dockWidget->hide();
-    the_Item_showing=obj_node;
+    the_current_note_item=obj_node;
     //打开
     connect(open,&QAction::triggered,[&]{
-        show_key_content(obj_node->getContent());
+        show_key_content(obj_node);
     });
     //重命名
     connect(rename,&QAction::triggered,[&]{
@@ -2202,13 +2281,13 @@ void MainWindow::on_note_search_key_lineEdit_returnPressed()
     }
     //如果只有一个结果，直接打开
     if(a.size()==1)
-        show_key_content(note.find_node(a.value(0))->getContent());
+        show_key_content(note.find_node(a.value(0)));
 }
 
 void MainWindow::on_action_read_write_mode_triggered()
 {
-    R_W_mode=!R_W_mode;
-    if(R_W_mode)//阅读模式
+    setting_data.R_W_mode=!setting_data.R_W_mode;
+    if(setting_data.R_W_mode)//阅读模式
     {
         label_rw_mode->setText(" Read-Mode ");
 //        label_rw_mode->setStyleSheet("background:rgb(220,180,180)");
@@ -2222,7 +2301,7 @@ void MainWindow::on_action_read_write_mode_triggered()
     }
     auto w=current_page();
     if(w!=Q_NULLPTR)
-            w->setReadOnly(R_W_mode);
+            w->setReadOnly(setting_data.R_W_mode);
 }
 
 void MainWindow::on_action_Margin_triggered()
@@ -2230,7 +2309,7 @@ void MainWindow::on_action_Margin_triggered()
     int temp_margin=4;
     auto current_w=current_page();
     if(current_w!=Q_NULLPTR)
-        text_margin=current_w->document()->documentMargin();
+        setting_data.text_margin=current_w->document()->documentMargin();
 
     QDialog w;
     w.resize(450,100);
@@ -2243,8 +2322,8 @@ void MainWindow::on_action_Margin_triggered()
         box.setRange(1,current_w->document()->textWidth()/2);
     else
         box.setRange(1,50);
-    if(text_margin>1)
-        box.setValue(text_margin);
+    if(setting_data.text_margin>1)
+        box.setValue(setting_data.text_margin);
 
     QHBoxLayout btn(&w);
     layout.addLayout(&btn);
@@ -2262,12 +2341,12 @@ void MainWindow::on_action_Margin_triggered()
     });
 
     connect(&cancel,&QPushButton::clicked,[current_w,this,&w]{
-        current_w->document()->setDocumentMargin(text_margin);
+        current_w->document()->setDocumentMargin(setting_data.text_margin);
         w.close();
     });
     connect(&ok,&QPushButton::clicked,[&temp_margin,current_w,this,&w]{
-        this->text_margin=temp_margin;
-        current_w->document()->setDocumentMargin(text_margin);
+        this->setting_data.text_margin=temp_margin;
+        current_w->document()->setDocumentMargin(setting_data.text_margin);
         w.close();
     });
     w.exec();
@@ -2284,7 +2363,7 @@ void MainWindow::on_action_line_high_triggered()
     QSpinBox box;
     layout.addWidget(&box);
     box.setRange(1,100);
-    box.setValue(line_height);
+    box.setValue(setting_data.line_height);
 
     QHBoxLayout btn(&w);
     layout.addLayout(&btn);
@@ -2302,13 +2381,13 @@ void MainWindow::on_action_line_high_triggered()
 
     connect(&cancel,&QPushButton::clicked,[current_w,this,&w]{
         if(current_w!=Q_NULLPTR)
-            current_w->set_line_height(line_height);
+            current_w->set_line_height(setting_data.line_height);
         w.close();
     });
     connect(&ok,&QPushButton::clicked,[&box,current_w,this,&w]{
-        this->line_height=box.value();
+        this->setting_data.line_height=box.value();
         if(current_w!=Q_NULLPTR)
-            current_w->set_line_height(line_height);
+            current_w->set_line_height(setting_data.line_height);
         w.close();
     });
     w.exec();
@@ -2606,17 +2685,17 @@ void MainWindow::on_note_key_treeWidget_itemDoubleClicked(QTreeWidgetItem *item,
 {
     Q_UNUSED(column);
     //从表中获取数据
-    the_Item_showing=item->data(0,Qt::UserRole).value<Note_Item*>();
-    if(the_Item_showing)
-        show_key_content(the_Item_showing->getContent());
+    the_current_note_item=item->data(0,Qt::UserRole).value<Note_Item*>();
+    if(the_current_note_item)
+        show_key_content(the_current_note_item);
 }
 
 void MainWindow::on_note_key_listWidget_itemDoubleClicked(QListWidgetItem *item)
 {
     //从表中获取数据
-    the_Item_showing=item->data(Qt::UserRole).value<Note_Item*>();
-    if(the_Item_showing)
-        show_key_content(the_Item_showing->getContent());
+    the_current_note_item=item->data(Qt::UserRole).value<Note_Item*>();
+    if(the_current_note_item)
+        show_key_content(the_current_note_item);
 }
 
 void MainWindow::on_note_key_listWidget_customContextMenuRequested(const QPoint &pos)
@@ -2640,10 +2719,10 @@ void MainWindow::on_note_key_listWidget_customContextMenuRequested(const QPoint 
     if(!obj_node)return;
     //更新当前笔记项
     ui->show_nodes_dockWidget->hide();
-    the_Item_showing=obj_node;
+    the_current_note_item=obj_node;
     //打开
     connect(open,&QAction::triggered,[&]{
-        show_key_content(obj_node->getContent());
+        show_key_content(obj_node);
     });
     //重命名
     connect(rename,&QAction::triggered,[&]{
@@ -2850,4 +2929,48 @@ void MainWindow::on_actionAppend_notes_from_ClipBoard_triggered()
     preview_window->exec();
 
     delete preview_window;
+}
+
+void MainWindow::on_btn_show_current_notes_clicked()
+{
+    auto key=ui->note_key_LineEdit->text().trimmed();
+    if(key.size()==0)
+    {
+        ui->statusBar->showMessage("空索引");
+        return;
+    }
+    auto node=note.find_node(key);
+    if(node)
+        show_key_content(node);
+    else
+        ui->statusBar->showMessage("无效索引");
+}
+
+void MainWindow::on_btn_undo_add_note_clicked()
+{
+    auto note_item=note.find_node(last_added_key);
+    if(note_item)
+    {
+        if(note_item->remove_one(last_added_content))
+        {
+            ui->statusBar->showMessage("已删除："+last_added_content+"("+last_added_key+")");
+            //若注销后，本索引内无笔记条目，将整个索引删除
+            if(note_item->count_piece()==0)
+            {
+                note.remove_one(*note_item);
+                return;
+            }
+        }
+        else
+            ui->statusBar->showMessage("删除失败："+last_added_content+"("+last_added_key+")");
+    }
+    if(!ui->show_nodes_dockWidget->isHidden())
+        show_key_content(note_item);
+}
+
+void MainWindow::on_actionSetting_triggered()
+{
+    Setting_Data data;
+    Setting_Dialog w(data);
+    w.exec();
 }

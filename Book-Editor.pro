@@ -16,6 +16,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    setting_dialog.cpp \
     src/book.cpp \
     src/main.cpp \
     src/mainwindow.cpp \
@@ -26,7 +27,8 @@ HEADERS += \
     inc/book.h \
     inc/mainwindow.h \
     inc/note.h \
-    inc/textedit.h
+    inc/textedit.h \
+    setting_dialog.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -34,7 +36,8 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 FORMS += \
-    mainwindow.ui
+    mainwindow.ui \
+    setting_dialog.ui
 
 RESOURCES += \
     res.qrc
