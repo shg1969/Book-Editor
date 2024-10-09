@@ -423,6 +423,7 @@ void MainWindow::renew_file_browse_tree()
 void MainWindow::open_chapter(Chapter *chapter_p)
 {
     if(chapter_p==Q_NULLPTR)return;
+    //若该章节尚未被打开
     if(chapter_p->get_tab_pointer()==Q_NULLPTR)
     {
         TextEdit *new_tab=new TextEdit(setting_data.R_W_mode,this);
@@ -612,6 +613,8 @@ void MainWindow::on_actionAdd_Chapter_triggered()
             }
         }
     }
+    //新章节位置
+    chapter_index=chapter_index+1<book.data[volume_index].size()?chapter_index+1:book.data[volume_index].size();
 
     QDialog w;
     w.setWindowTitle("添加新章节");
@@ -624,9 +627,9 @@ void MainWindow::on_actionAdd_Chapter_triggered()
 
     QLabel pos_tips;
     if(book.data.size()&&book.data[volume_index].size()>chapter_index)//有章节作为位置参考
-        pos_tips.setText("在章节 “"+book.data[volume_index][chapter_index].name+"” 前插入");
+        pos_tips.setText("在章节“"+book.data[volume_index][chapter_index-1].name+"”后插入新章节");
     else                                //没有章节作为位置参考
-        pos_tips.setText("在卷 “"+book.volume_names[volume_index]+"” 内追加");
+        pos_tips.setText("在卷“"+book.volume_names[volume_index]+"”内追加");
     main_layout.addWidget(&pos_tips);
     QHBoxLayout H_layout_name;
     main_layout.addLayout(&H_layout_name);
@@ -634,7 +637,7 @@ void MainWindow::on_actionAdd_Chapter_triggered()
     QLabel L_name("章名");
     QLineEdit edit_name;
     QSpinBox spinbox_index;
-    spinbox_index.setRange(0,chapter_index+1>book.data[volume_index].size()?chapter_index+1:book.data[volume_index].size());
+    spinbox_index.setRange(0,chapter_index>book.data[volume_index].size()?chapter_index:book.data[volume_index].size());
     spinbox_index.setValue(chapter_index);
     H_layout_name.addWidget(&L_name);
     H_layout_name.addWidget(&edit_name);
@@ -674,11 +677,11 @@ void MainWindow::on_actionAdd_Chapter_triggered()
         //确定插入位置chapter_index
         chapter_index=i;
         if(i<book.data[volume_index].size())
-            pos_tips.setText("在章节 “"+book.data[volume_index][i].name+"” 前插入");
+            pos_tips.setText("在章节“"+book.data[volume_index][i].name+"”前插入新章节");
         else if(book.data[volume_index].size()==0)
-            pos_tips.setText("在“"+book.volume_names[volume_index]+"” 内添加");
+            pos_tips.setText("在“"+book.volume_names[volume_index]+"”内添加新章节");
         else
-            pos_tips.setText("在章节 “"+book.data[volume_index].back().name+"” 后插入");
+            pos_tips.setText("在章节“"+book.data[volume_index].back().name+"”后插入新章节");
     });
     connect(&cancel,&QPushButton::clicked,[&]{
         w.close();
@@ -1294,7 +1297,6 @@ void MainWindow::show_key_content(Note_Item *item)
 void MainWindow::on_note_key_LineEdit_returnPressed()
 {
     auto key=ui->note_key_LineEdit->text();
-    ui->note_key_LineEdit->selectAll();
 
     auto content=ui->note_content_LineEdit->text();
     //由于索引修改了，清空笔记输入框
@@ -1304,8 +1306,12 @@ void MainWindow::on_note_key_LineEdit_returnPressed()
     {
         last_added_key=key;
         last_added_content=content;
+        note.save(NOTE_CONTENT,0);//保存备份
+        is_modefied=1;
     }
-    is_modefied=1;
+
+    ui->note_key_LineEdit->setFocus();
+    ui->note_key_LineEdit->selectAll();
 }
 
 void MainWindow::on_note_save_btn_clicked()
@@ -1552,7 +1558,7 @@ void MainWindow::on_actionAdd_volume_triggered()
 {
     //添加章节最关键的是要找到目标位置的卷标
     int volume_index=0;
-    //确定卷标
+    //确定当前卷标
     auto current_item=ui->dir_treeWidget->currentItem();//当前项
     qDebug()<<current_item;
     if(current_item!=Q_NULLPTR)
@@ -1572,6 +1578,8 @@ void MainWindow::on_actionAdd_volume_triggered()
             }
         }
     }
+    //确定新卷卷标
+    volume_index++;
 
     QDialog w;
     w.setWindowTitle("添加新卷");
@@ -1581,7 +1589,7 @@ void MainWindow::on_actionAdd_volume_triggered()
 
     QLabel pos_tips;
     if(book.data.size())//有卷名作为位置参考
-        pos_tips.setText("在 “"+book.volume_names[volume_index]+"” 前插入");
+        pos_tips.setText("在“"+book.volume_names[volume_index-1]+"”后插入新卷");
     else                //没有章节作为位置参考
         pos_tips.setText("新建卷");
     main_layout.addWidget(&pos_tips);
@@ -1591,7 +1599,7 @@ void MainWindow::on_actionAdd_volume_triggered()
     QLabel L_name("新卷卷名");
     QLineEdit edit_name;
     QSpinBox spinbox_index;
-    spinbox_index.setRange(0,volume_index+1);
+    spinbox_index.setRange(0,book.volume_names.size());
     spinbox_index.setValue(volume_index);
     H_layout_name.addWidget(&L_name);
     H_layout_name.addWidget(&edit_name);
@@ -1630,11 +1638,11 @@ void MainWindow::on_actionAdd_volume_triggered()
         //确定插入位置chapter_index
         volume_index=i;
         if(i<book.data.size())
-            pos_tips.setText("在 “"+book.volume_names[volume_index]+"” 前插入");
+            pos_tips.setText("在“"+book.volume_names[volume_index]+"”前插入新卷");
         else if(book.data.size()==0)
             pos_tips.setText("添加新卷");
         else
-            pos_tips.setText("在 “"+book.volume_names.back()+"” 后插入");
+            pos_tips.setText("在“"+book.volume_names.back()+"”后插入新卷");
     });
     connect(&cancel,&QPushButton::clicked,[&]{
         w.close();
@@ -1852,9 +1860,9 @@ void MainWindow::readSettings()
     }
     //自动保存
     connect(save_book_timer,&QTimer::timeout,this,&MainWindow::auto_save_book);
-    connect(save_notes_timer,&QTimer::timeout,this,&MainWindow::auto_save_notes);
-    save_book_timer->start(1000*60*10);//每十分钟自动备份一次
-    save_notes_timer->start(1000*60*2);     //每两分钟自动备份一次
+//    connect(save_notes_timer,&QTimer::timeout,this,&MainWindow::auto_save_notes);
+    save_book_timer->start(1000*60*3);//每三分钟自动备份一次
+//    save_notes_timer->start(1000*60*2);     //每两分钟自动备份一次
 
     f.close();
 }
@@ -2684,10 +2692,19 @@ void MainWindow::on_tabWidget_tabBarDoubleClicked(int index)
 void MainWindow::on_note_key_treeWidget_itemDoubleClicked(QTreeWidgetItem *item, int column)
 {
     Q_UNUSED(column);
+    if(!item)return;
     //从表中获取数据
-    the_current_note_item=item->data(0,Qt::UserRole).value<Note_Item*>();
-    if(the_current_note_item)
-        show_key_content(the_current_note_item);
+    auto obj_note=item->data(0,Qt::UserRole).value<Note_Item*>();
+    if(ui->show_nodes_dockWidget->isHidden()||the_current_note_item!=obj_note)
+    {
+        the_current_note_item=obj_note;
+        if(the_current_note_item)
+            show_key_content(the_current_note_item);
+    }
+    else
+    {
+        ui->show_nodes_dockWidget->hide();
+    }
 }
 
 void MainWindow::on_note_key_listWidget_itemDoubleClicked(QListWidgetItem *item)

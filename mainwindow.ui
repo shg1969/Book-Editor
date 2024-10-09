@@ -879,6 +879,9 @@
    <property name="text">
     <string>另存为</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+S</string>
+   </property>
   </action>
   <action name="actionClose">
    <property name="icon">
@@ -923,6 +926,9 @@
    </property>
    <property name="text">
     <string>插入新章节</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+C</string>
    </property>
   </action>
   <action name="actionRemove_Chapter">
@@ -982,6 +988,9 @@
    <property name="toolTip">
     <string>新建卷</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+V</string>
+   </property>
   </action>
   <action name="actionRm_volume">
    <property name="icon">
@@ -1033,6 +1042,9 @@
    </property>
    <property name="toolTip">
     <string>设置阅读模式或编辑模式</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+M</string>
    </property>
   </action>
   <action name="action_Margin">
